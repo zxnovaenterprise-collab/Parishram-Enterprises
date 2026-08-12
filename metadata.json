@@ -1,0 +1,10 @@
+{
+  "name": "Payroll & Workforce Management",
+  "description": "Comprehensive workforce management app featuring business dashboard, complete payroll table, employee onboarding form with camera document capture (Aadhaar/PAN), printable multi-page records, ID cards, and settings.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
