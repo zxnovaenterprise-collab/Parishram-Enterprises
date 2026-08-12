@@ -1,7 +1,17 @@
 @import "tailwindcss";
 
+/* SCREEN ONLY UTILITIES */
+@media screen {
+  /* Ensure smooth scrolling inside modals */
+  .modal-scroll-area {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* PRINT ENGINE STYLES */
 @media print {
-  /* 1. Global Page Reset */
+  /* 1. Reset Global Canvas to Paper Page */
   html, body, #root {
     background: #ffffff !important;
     color: #000000 !important;
@@ -15,7 +25,31 @@
     print-color-adjust: exact !important;
   }
 
-  /* 2. Hide all non-printable navigation, headers, footers, buttons */
+  /* 2. Un-hide containers for print so nested elements render */
+  main,
+  form,
+  [role="dialog"],
+  .fixed,
+  .fixed.inset-0,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+  }
+
+  /* 3. Hide all non-printable buttons, headers, footers, action bars */
   header,
   nav,
   footer,
@@ -27,35 +61,7 @@
     display: none !important;
   }
 
-  /* 3. Modal unwrap: convert fixed overlays to static full-width blocks */
-  .fixed,
-  .fixed.inset-0,
-  .backdrop-blur-sm,
-  .backdrop-blur-md,
-  .backdrop-blur-lg,
-  [role="dialog"] {
-    position: static !important;
-    inset: auto !important;
-    background: #ffffff !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    box-shadow: none !important;
-    border: none !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    overflow: visible !important;
-    display: block !important;
-  }
-
-  /* 4. Hide background main app layout if a printable modal dialog is active */
-  body:has(#printable-payslip) main,
-  body:has(#printable-employee-doc) main {
-    display: none !important;
-  }
-
-  /* 5. Direct printable wrapper styling */
+  /* 4. Target ONLY printable document containers */
   #printable-employee-doc,
   #printable-payslip,
   #printable-id-card,
@@ -72,7 +78,6 @@
     overflow: visible !important;
   }
 
-  /* Force exact color adjustment and visibility on all printable children */
   #printable-employee-doc *,
   #printable-payslip *,
   #printable-id-card *,
@@ -82,14 +87,12 @@
     print-color-adjust: exact !important;
   }
 
-  /* 6. Strict Page Breaks for 2-Page Employee Record */
+  /* 5. Page breaks for 2-page Employee Record */
   .print-page-1 {
     page-break-after: always !important;
     break-after: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    margin-bottom: 0 !important;
-    padding-bottom: 0 !important;
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
@@ -100,13 +103,12 @@
     break-before: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    padding-top: 2mm !important;
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  /* 7. Paper margin & size */
+  /* 6. Standard A4 Paper Settings */
   @page {
     size: A4 portrait;
     margin: 8mm;
