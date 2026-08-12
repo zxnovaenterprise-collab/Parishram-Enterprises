@@ -23,12 +23,18 @@ export const SearchableCompanySelect: React.FC<SearchableCompanySelectProps> = (
 
   // Default fallback companies if array is empty
   const defaultList = [
+    'SOHONI METALS PVT LTD',
+    'A1 FENCE PVT LTD',
+    'TPACK PACKING INDIA PVT LTD',
     'WESTERN REFRIGERATION PVT LTD',
+    'INTERIOR AND MORE LTD',
+    'COPTEC',
+    'COPTEC PRIVATE LIMITED',
+    'UMBER CELL PVT LTD',
+    'ALKON PLASTICS PVT LTD',
+    'SRINI LINK PVT LTD',
     'STERLING GENERATORS PVT LTD',
     'ALKEM LABORATORIES LTD',
-    'TATA STEEL BSL LTD',
-    'AMNEAL PHARMACEUTICALS',
-    'SUN PHARMA INDUSTRIES',
   ];
 
   const allCompaniesList = Array.from(

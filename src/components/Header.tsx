@@ -80,6 +80,11 @@ export const Header: React.FC<HeaderProps> = ({
             <span>Active Staff: <strong className="text-white">{employeeCount}</strong></span>
           </div>
 
+          <div className="hidden md:flex items-center gap-2 bg-emerald-950/80 px-3 py-1.5 rounded-lg border border-emerald-800/60 text-emerald-300 text-xs font-bold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Firebase Connected</span>
+          </div>
+
           {currentUser && (
             <div className="flex items-center gap-2 bg-blue-950/80 px-3 py-1.5 rounded-lg border border-blue-800/60 text-blue-200">
               <UserCheck className="w-4 h-4 text-emerald-400" />

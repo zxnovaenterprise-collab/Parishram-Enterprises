@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { 
   FileSpreadsheet, Upload, Download, FileCheck, Search, Filter, Plus, 
-  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X, Building
+  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X, Building, Database
 } from 'lucide-react';
 import { PayrollRecord, CompanySettings } from '../types';
 import { formatINR, calculatePayrollRow } from '../lib/calculations';
 import { downloadSampleExcel, exportPayrollToExcel, parseExcelOrCsvFile } from '../lib/excel';
 import { SearchableCompanySelect } from './SearchableCompanySelect';
+import { savePayrollRecordToFirestore, saveBatchPayrollRecordsToFirestore, deletePayrollRecordFromFirestore } from '../lib/firebase';
 
 interface PayrollProps {
   records: PayrollRecord[];
   setRecords: React.Dispatch<React.SetStateAction<PayrollRecord[]>>;
   settings: CompanySettings;
   onPrintSlip: (record: PayrollRecord) => void;
+  onOpenSqlImportModal?: () => void;
 }
 
 export const Payroll: React.FC<PayrollProps> = ({
@@ -20,6 +22,7 @@ export const Payroll: React.FC<PayrollProps> = ({
   setRecords,
   settings,
   onPrintSlip,
+  onOpenSqlImportModal,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('ALL');
@@ -74,6 +77,7 @@ export const Payroll: React.FC<PayrollProps> = ({
       }
 
       setRecords(importedRows);
+      saveBatchPayrollRecordsToFirestore(importedRows).catch(console.error);
       setImportStatus({
         message: `Successfully imported ${importedRows.length} employee payroll rows!`,
         type: 'success',
@@ -94,6 +98,7 @@ export const Payroll: React.FC<PayrollProps> = ({
   const handleDeleteRow = (id: string) => {
     if (confirm('Are you sure you want to delete this employee payroll row?')) {
       setRecords((prev) => prev.filter((r) => r.id !== id));
+      deletePayrollRecordFromFirestore(id).catch(console.error);
     }
   };
 
@@ -111,6 +116,8 @@ export const Payroll: React.FC<PayrollProps> = ({
       // Add
       setRecords((prev) => [...prev, computedRow]);
     }
+
+    savePayrollRecordToFirestore(computedRow).catch(console.error);
 
     setIsAddEditModalOpen(false);
     setEditingRecord(null);
@@ -167,6 +174,18 @@ export const Payroll: React.FC<PayrollProps> = ({
                 className="hidden"
               />
             </label>
+
+            {/* Import SQL File */}
+            {onOpenSqlImportModal && (
+              <button
+                onClick={onOpenSqlImportModal}
+                id="btn-import-sql-payroll"
+                className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-md shadow-indigo-600/20"
+              >
+                <Database className="w-4 h-4 text-indigo-200" />
+                Import SQL
+              </button>
+            )}
 
             {/* Export All Data */}
             <button

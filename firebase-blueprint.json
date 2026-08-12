@@ -1,0 +1,47 @@
+{
+  "entities": {
+    "employees": {
+      "title": "Employee Registration",
+      "description": "Stores employee profiles",
+      "properties": {
+        "id": { "type": "string" },
+        "cardNo": { "type": "string" },
+        "fullName": { "type": "string" },
+        "fatherName": { "type": "string" },
+        "phone": { "type": "string" },
+        "siteLocation": { "type": "string" },
+        "baseRate": { "type": "number" },
+        "uan": { "type": "string" },
+        "esicNo": { "type": "string" },
+        "accountNumber": { "type": "string" },
+        "ifscCode": { "type": "string" },
+        "bankName": { "type": "string text-slate-400" }
+      },
+      "required": ["cardNo", "fullName"]
+    },
+    "payrollRecords": {
+      "title": "Payroll Records",
+      "description": "Stores monthly payroll records",
+      "properties": {
+        "id": { "type": "string" },
+        "cardNo": { "type": "string" },
+        "name": { "type": "string" },
+        "days": { "type": "number" },
+        "rate": { "type": "number" },
+        "salary": { "type": "number" },
+        "netSalary": { "type": "number" },
+        "clientCompany": { "type": "string" }
+      },
+      "required": ["cardNo", "name"]
+    },
+    "settings": {
+      "title": "Company Settings",
+      "description": "Global company configuration",
+      "properties": {
+        "companyName": { "type": "string" },
+        "companySubTitle": { "type": "string" },
+        "companySite": { "type": "string" }
+      }
+    }
+  }
+}

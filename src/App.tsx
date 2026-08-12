@@ -11,10 +11,24 @@ import { SalarySlipModal } from './components/SalarySlipModal';
 import { MultiPagePrintPreview } from './components/MultiPagePrintPreview';
 import { LoginModal } from './components/LoginModal';
 import { MobileBottomNav } from './components/MobileBottomNav';
+import { SqlImportModal } from './components/SqlImportModal';
+import { 
+  subscribeEmployees, 
+  subscribePayrollRecords, 
+  subscribeSettings, 
+  saveBatchEmployeesToFirestore, 
+  saveBatchPayrollRecordsToFirestore, 
+  saveSettingsToFirestore,
+  saveEmployeeToFirestore,
+  savePayrollRecordToFirestore
+} from './lib/firebase';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
+
+  // SQL Import Modal state
+  const [isSqlImportModalOpen, setIsSqlImportModalOpen] = useState(false);
 
   // Users & Authentication State
   const [users, setUsers] = useState<PortalUser[]>(() => {
@@ -27,7 +41,7 @@ export default function App() {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // LocalStorage state initialization
+  // Data States
   const [settings, setSettings] = useState<CompanySettings>(() => {
     const saved = localStorage.getItem('apex_company_settings');
     return saved ? JSON.parse(saved) : initialCompanySettings;
@@ -43,13 +57,48 @@ export default function App() {
     return saved ? JSON.parse(saved) : samplePayrollRecords;
   });
 
+  // Real-time Firestore Subscriptions
+  useEffect(() => {
+    const unsubEmployees = subscribeEmployees((remoteEmployees) => {
+      if (remoteEmployees && remoteEmployees.length > 0) {
+        setEmployees(remoteEmployees);
+      } else if (sampleEmployees.length > 0) {
+        // Seed initial data to Firestore if cloud database is empty
+        saveBatchEmployeesToFirestore(sampleEmployees).catch(console.error);
+      }
+    });
+
+    const unsubPayroll = subscribePayrollRecords((remotePayroll) => {
+      if (remotePayroll && remotePayroll.length > 0) {
+        setPayrollRecords(remotePayroll);
+      } else if (samplePayrollRecords.length > 0) {
+        // Seed initial payroll data
+        saveBatchPayrollRecordsToFirestore(samplePayrollRecords).catch(console.error);
+      }
+    });
+
+    const unsubSettings = subscribeSettings((remoteSettings) => {
+      if (remoteSettings && remoteSettings.companyName) {
+        setSettings(remoteSettings);
+      } else {
+        saveSettingsToFirestore(initialCompanySettings).catch(console.error);
+      }
+    });
+
+    return () => {
+      unsubEmployees();
+      unsubPayroll();
+      unsubSettings();
+    };
+  }, []);
+
   // Modal for salary slip print preview
   const [selectedPayslipRecord, setSelectedPayslipRecord] = useState<PayrollRecord | null>(null);
 
   // Modal for 2-Page Employee Application Form & ID Card + Docs print preview
   const [previewEmployee, setPreviewEmployee] = useState<EmployeeForm | null>(null);
 
-  // Sync state to LocalStorage
+  // Sync state to LocalStorage as secondary cache
   useEffect(() => {
     localStorage.setItem('apex_portal_users', JSON.stringify(users));
   }, [users]);
@@ -136,6 +185,7 @@ export default function App() {
             setRecords={setPayrollRecords}
             settings={settings}
             onPrintSlip={(rec) => setSelectedPayslipRecord(rec)}
+            onOpenSqlImportModal={() => setIsSqlImportModalOpen(true)}
           />
         )}
 
@@ -146,6 +196,7 @@ export default function App() {
             settings={settings}
             onOpenPreview={(emp) => setPreviewEmployee(emp)}
             setPayrollRecords={setPayrollRecords}
+            onOpenSqlImportModal={() => setIsSqlImportModalOpen(true)}
           />
         )}
 
@@ -167,9 +218,27 @@ export default function App() {
             onResetData={handleResetData}
             users={users}
             setUsers={setUsers}
+            onOpenSqlImportModal={() => setIsSqlImportModalOpen(true)}
           />
         )}
       </main>
+
+      {/* SQL Import Modal */}
+      {isSqlImportModalOpen && (
+        <SqlImportModal
+          onClose={() => setIsSqlImportModalOpen(false)}
+          onImportSuccess={(newEmps, newPayrolls) => {
+            if (newEmps.length > 0) {
+              setEmployees((prev) => [...newEmps, ...prev]);
+              saveBatchEmployeesToFirestore(newEmps).catch(console.error);
+            }
+            if (newPayrolls.length > 0) {
+              setPayrollRecords((prev) => [...newPayrolls, ...prev]);
+              saveBatchPayrollRecordsToFirestore(newPayrolls).catch(console.error);
+            }
+          }}
+        />
+      )}
 
       {/* Responsive App Bottom Tab Bar for Mobile */}
       <MobileBottomNav

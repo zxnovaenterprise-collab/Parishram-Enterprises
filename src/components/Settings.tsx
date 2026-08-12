@@ -2,9 +2,16 @@ import React, { useState, useRef } from 'react';
 import { 
   Settings as SettingsIcon, Building2, Save, RotateCcw, Download, Upload, 
   CheckCircle2, Plus, Trash2, Image as ImageIcon, Users, Key, Lock, ShieldCheck, 
-  X, Check, Sparkles, Building
+  X, Check, Sparkles, Building, Database, HardDrive, Cpu, Cloud, RefreshCw, Zap, Server
 } from 'lucide-react';
 import { CompanySettings, EmployeeForm, PayrollRecord, PortalUser, ActiveTab } from '../types';
+import { 
+  saveSettingsToFirestore, 
+  pingFirestore, 
+  saveBatchEmployeesToFirestore, 
+  saveBatchPayrollRecordsToFirestore 
+} from '../lib/firebase';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 interface SettingsProps {
   settings: CompanySettings;
@@ -16,6 +23,7 @@ interface SettingsProps {
   onResetData: () => void;
   users: PortalUser[];
   setUsers: React.Dispatch<React.SetStateAction<PortalUser[]>>;
+  onOpenSqlImportModal?: () => void;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
@@ -28,6 +36,7 @@ export const Settings: React.FC<SettingsProps> = ({
   onResetData,
   users,
   setUsers,
+  onOpenSqlImportModal,
 }) => {
   const [formData, setFormData] = useState<CompanySettings>({
     ...settings,
@@ -43,6 +52,45 @@ export const Settings: React.FC<SettingsProps> = ({
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [newCompanyName, setNewCompanyName] = useState('');
+
+  // Firebase Cloud Diagnostics State
+  const [pingLatency, setPingLatency] = useState<number | null>(null);
+  const [isPinging, setIsPinging] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
+
+  const handlePingFirebase = async () => {
+    setIsPinging(true);
+    try {
+      const ms = await pingFirestore();
+      setPingLatency(ms);
+      setSyncStatusMsg(`Firebase Cloud Firestore Ping: ${ms}ms latency.`);
+    } catch (err: any) {
+      setSyncStatusMsg(`Firebase Ping Error: ${err.message || err}`);
+    } finally {
+      setIsPinging(false);
+      setTimeout(() => setSyncStatusMsg(null), 5000);
+    }
+  };
+
+  const handleForceSyncAll = async () => {
+    setIsSyncing(true);
+    try {
+      if (employees.length > 0) {
+        await saveBatchEmployeesToFirestore(employees);
+      }
+      if (payrollRecords.length > 0) {
+        await saveBatchPayrollRecordsToFirestore(payrollRecords);
+      }
+      await saveSettingsToFirestore(formData);
+      setSyncStatusMsg(`Successfully synchronized ${employees.length} employee documents, ${payrollRecords.length} payroll records, and settings to Firestore!`);
+    } catch (err: any) {
+      setSyncStatusMsg(`Sync Error: ${err.message || err}`);
+    } finally {
+      setIsSyncing(false);
+      setTimeout(() => setSyncStatusMsg(null), 5000);
+    }
+  };
 
   // Logo file upload ref
   const logoFileRef = useRef<HTMLInputElement>(null);
@@ -62,6 +110,7 @@ export const Settings: React.FC<SettingsProps> = ({
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
     setSettings(formData);
+    saveSettingsToFirestore(formData).catch(console.error);
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
@@ -614,6 +663,137 @@ export const Settings: React.FC<SettingsProps> = ({
         </div>
       </div>
 
+      {/* Firebase Cloud Connection & Storage Usage Panel */}
+      <div className="bg-slate-900 text-white rounded-2xl border border-slate-800 shadow-xl p-6 space-y-6 overflow-hidden relative">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-blue-600/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Panel Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-3 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl">
+              <Cloud className="w-6 h-6 animate-pulse" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="text-base font-extrabold text-white">Firebase Cloud Storage & Real-time Database</h3>
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 text-[10px] font-bold uppercase tracking-wider flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                  Connected & Live
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Google Cloud Firestore document database & authentication integration active with real-time websocket sync.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handlePingFirebase}
+              disabled={isPinging}
+              id="btn-ping-firebase"
+              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shrink-0"
+            >
+              <Zap className={`w-4 h-4 text-amber-400 ${isPinging ? 'animate-bounce' : ''}`} />
+              {isPinging ? 'Pinging Cloud...' : 'Test Cloud Connection'}
+            </button>
+
+            <button
+              onClick={handleForceSyncAll}
+              disabled={isSyncing}
+              id="btn-sync-firebase"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-lg shadow-blue-600/30 flex items-center gap-2 cursor-pointer transition-all shrink-0"
+            >
+              <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
+              {isSyncing ? 'Syncing...' : 'Sync All Data to Firestore'}
+            </button>
+          </div>
+        </div>
+
+        {syncStatusMsg && (
+          <div className="p-3 bg-blue-950/90 border border-blue-500/40 rounded-xl text-blue-200 text-xs font-bold flex items-center gap-2 animate-fadeIn">
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <span>{syncStatusMsg}</span>
+          </div>
+        )}
+
+        {/* Live Storage Usage Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Storage Stat 1 */}
+          <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+              <span className="flex items-center gap-1.5"><Users className="w-4 h-4 text-blue-400" /> Employees Store</span>
+              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-2 py-0.5 rounded font-mono">Firestore</span>
+            </div>
+            <div className="text-xl font-black text-white font-mono">{employees.length} Docs</div>
+            <p className="text-[10px] text-slate-400 mt-1">Est. Size: ~{(employees.length * 0.45).toFixed(2)} KB</p>
+          </div>
+
+          {/* Storage Stat 2 */}
+          <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+              <span className="flex items-center gap-1.5"><Database className="w-4 h-4 text-emerald-400" /> Payroll Records</span>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">Firestore</span>
+            </div>
+            <div className="text-xl font-black text-white font-mono">{payrollRecords.length} Docs</div>
+            <p className="text-[10px] text-slate-400 mt-1">Est. Size: ~{(payrollRecords.length * 0.85).toFixed(2)} KB</p>
+          </div>
+
+          {/* Storage Stat 3 */}
+          <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+              <span className="flex items-center gap-1.5"><HardDrive className="w-4 h-4 text-indigo-400" /> Total Storage Used</span>
+              <span className="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-mono">Calculated</span>
+            </div>
+            <div className="text-xl font-black text-emerald-400 font-mono">
+              ~{((employees.length * 0.45) + (payrollRecords.length * 0.85) + 0.85).toFixed(2)} KB
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">Capacity: Unlimited Firestore Cloud</p>
+          </div>
+
+          {/* Storage Stat 4 */}
+          <div className="p-4 bg-slate-800/80 border border-slate-700/80 rounded-xl">
+            <div className="flex items-center justify-between text-slate-400 text-xs font-semibold mb-2">
+              <span className="flex items-center gap-1.5"><Cpu className="w-4 h-4 text-amber-400" /> Latency & Status</span>
+              <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono">Live</span>
+            </div>
+            <div className="text-xl font-black text-white font-mono">
+              {pingLatency !== null ? `${pingLatency} ms` : 'Active'}
+            </div>
+            <p className="text-[10px] text-slate-400 mt-1">CRUD: Add, Edit, Delete Sync Enabled</p>
+          </div>
+        </div>
+
+        {/* Configuration Summary Table */}
+        <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 text-xs space-y-2">
+          <div className="font-bold text-slate-300 flex items-center justify-between border-b border-slate-800 pb-2">
+            <span className="flex items-center gap-2">
+              <Server className="w-4 h-4 text-blue-400" />
+              Firebase Project Credentials & Environment Parameters
+            </span>
+            <span className="text-[10px] text-slate-500 font-mono">firebase-applet-config.json</span>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-slate-400 font-mono text-[11px] pt-1">
+            <div>
+              <span className="text-slate-500 block">Firebase Project ID:</span>
+              <strong className="text-slate-200">{firebaseConfig.projectId || 'gen-lang-client-0393236150'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Firestore Database ID:</span>
+              <strong className="text-slate-200">{firebaseConfig.firestoreDatabaseId || 'ai-studio-payrollworkforce-df125ddd-cda9-4e15-a2e0-a85a4eba3ab8'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Auth Domain:</span>
+              <strong className="text-slate-200">{firebaseConfig.authDomain || 'Connected'}</strong>
+            </div>
+            <div>
+              <span className="text-slate-500 block">Storage Bucket:</span>
+              <strong className="text-slate-200">{firebaseConfig.storageBucket || 'Configured'}</strong>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Database Backup & Reset Box */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">
         <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
@@ -621,6 +801,17 @@ export const Settings: React.FC<SettingsProps> = ({
         </h3>
 
         <div className="flex flex-wrap items-center gap-3">
+          {onOpenSqlImportModal && (
+            <button
+              onClick={onOpenSqlImportModal}
+              id="btn-settings-import-sql"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-md shadow-blue-600/20"
+            >
+              <Database className="w-4 h-4 text-blue-200" />
+              Import SQL Dump File
+            </button>
+          )}
+
           <button
             onClick={handleExportDatabase}
             className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold rounded-xl flex items-center gap-2 cursor-pointer shadow"

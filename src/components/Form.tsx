@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import { 
   UserPlus, Camera, Upload, CheckCircle2, FileText, ShieldCheck, 
-  Trash2, Eye, Printer, AlertCircle, RefreshCw, Image as ImageIcon, X
+  Trash2, Eye, Printer, AlertCircle, RefreshCw, Image as ImageIcon, X, Database, Edit2
 } from 'lucide-react';
 import { EmployeeForm, DocumentType, DocumentUpload, CompanySettings, PayrollRecord } from '../types';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { MultiPagePrintPreview } from './MultiPagePrintPreview';
 import { SearchableCompanySelect } from './SearchableCompanySelect';
 import { calculatePayrollRow } from '../lib/calculations';
+import { saveEmployeeToFirestore, savePayrollRecordToFirestore, deleteEmployeeFromFirestore } from '../lib/firebase';
 
 interface FormProps {
   employees: EmployeeForm[];
@@ -15,6 +16,7 @@ interface FormProps {
   settings: CompanySettings;
   onOpenPreview?: (emp: EmployeeForm) => void;
   setPayrollRecords?: React.Dispatch<React.SetStateAction<PayrollRecord[]>>;
+  onOpenSqlImportModal?: () => void;
 }
 
 export const Form: React.FC<FormProps> = ({
@@ -23,6 +25,7 @@ export const Form: React.FC<FormProps> = ({
   settings,
   onOpenPreview,
   setPayrollRecords,
+  onOpenSqlImportModal,
 }) => {
   // Form State
   const [formData, setFormData] = useState<Partial<EmployeeForm>>({
@@ -171,7 +174,14 @@ export const Form: React.FC<FormProps> = ({
       createdAt: new Date().toISOString().split('T')[0],
     };
 
-    setEmployees((prev) => [newEmp, ...prev]);
+    setEmployees((prev) => {
+      const exists = prev.some((e) => e.id === newEmp.id);
+      if (exists) {
+        return prev.map((e) => (e.id === newEmp.id ? newEmp : e));
+      }
+      return [newEmp, ...prev];
+    });
+    saveEmployeeToFirestore(newEmp).catch(console.error);
 
     if (setPayrollRecords) {
       const newRecord = calculatePayrollRow({
@@ -187,10 +197,17 @@ export const Form: React.FC<FormProps> = ({
         agt: newEmp.agt || 'PARISHRAM-01',
         clientCompany: newEmp.siteLocation || settings.companySite || 'WESTERN REFRIGERATION PVT LTD',
       });
-      setPayrollRecords((prev) => [newRecord, ...prev]);
+      setPayrollRecords((prev) => {
+        const pExists = prev.some((p) => p.cardNo === newEmp.cardNo);
+        if (pExists) {
+          return prev.map((p) => (p.cardNo === newEmp.cardNo ? { ...p, ...newRecord, id: p.id } : p));
+        }
+        return [newRecord, ...prev];
+      });
+      savePayrollRecordToFirestore(newRecord).catch(console.error);
     }
 
-    showToast(`Employee "${newEmp.fullName}" saved and added to payroll!`);
+    showToast(`Employee "${newEmp.fullName}" saved to Cloud Firestore!`);
 
     // Open 2-Page Print preview immediately
     if (onOpenPreview) {
@@ -239,8 +256,15 @@ export const Form: React.FC<FormProps> = ({
   const handleDeleteEmployee = (id: string) => {
     if (confirm('Are you sure you want to delete this employee record?')) {
       setEmployees((prev) => prev.filter((e) => e.id !== id));
-      showToast('Employee record deleted.');
+      deleteEmployeeFromFirestore(id).catch(console.error);
+      showToast('Employee record deleted from cloud database.');
     }
+  };
+
+  const handleEditEmployee = (emp: EmployeeForm) => {
+    setFormData(emp);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    showToast(`Loaded ${emp.fullName} for editing.`);
   };
 
   return (
@@ -256,6 +280,17 @@ export const Form: React.FC<FormProps> = ({
             SITE: {settings.companySite || 'WESTERN REFRIGERATION PVT LTD'} • Fill in complete worker details, upload or snap profile photo, capture document attachments, and print 2-page forms.
           </p>
         </div>
+
+        {onOpenSqlImportModal && (
+          <button
+            onClick={onOpenSqlImportModal}
+            id="btn-form-import-sql"
+            className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 shadow-md shadow-indigo-600/20 cursor-pointer shrink-0"
+          >
+            <Database className="w-4 h-4 text-indigo-200" />
+            Import SQL File
+          </button>
+        )}
 
         {toastMessage && (
           <div className="bg-emerald-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg flex items-center gap-2 animate-bounce">
@@ -743,6 +778,13 @@ export const Form: React.FC<FormProps> = ({
                         >
                           <Eye className="w-3.5 h-3.5" />
                           View Form
+                        </button>
+                        <button
+                          onClick={() => handleEditEmployee(emp)}
+                          title="Edit Employee Details"
+                          className="p-1.5 text-slate-400 hover:text-blue-600 cursor-pointer"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteEmployee(emp.id)}
