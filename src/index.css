@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @media print {
-  /* 1. Reset Root and Page Canvas */
-  html, body, #root {
+  /* 1. Global Reset for Print Canvas */
+  html, body {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -15,54 +15,37 @@
     print-color-adjust: exact !important;
   }
 
-  /* 2. Hide non-printable interactive UI elements */
+  /* 2. Hide EVERYTHING on the page by default */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* 3. Hide non-printable action elements, buttons, navbars, headers, footers */
   header,
   nav,
   footer,
   aside,
   button,
   .print\:hidden,
-  [id^="btn-"],
-  .no-print {
+  .no-print,
+  [id^="btn-"] {
     display: none !important;
     visibility: hidden !important;
   }
 
-  /* 3. Keep layout containers visible without display:none so descendants can render */
-  main,
-  .fixed,
-  .fixed.inset-0,
-  .backdrop-blur-sm,
-  .backdrop-blur-md,
-  .backdrop-blur-lg {
-    position: static !important;
-    inset: auto !important;
-    background: #ffffff !important;
-    backdrop-filter: none !important;
-    -webkit-backdrop-filter: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    display: block !important;
-    visibility: visible !important;
-    overflow: visible !important;
-    width: 100% !important;
-    max-width: none !important;
-    box-shadow: none !important;
-    border: none !important;
-  }
-
-  /* 4. Target printable document containers */
-  #printable-payslip,
-  #printable-payslip *,
+  /* 4. Target ONLY the active printable container and make it and its descendants visible */
   #printable-employee-doc,
   #printable-employee-doc *,
+  #printable-payslip,
+  #printable-payslip *,
   #printable-id-card,
   #printable-id-card * {
     visibility: visible !important;
   }
 
-  #printable-payslip,
+  /* 5. Absolutely position the active printable container at top-left (0,0) of paper */
   #printable-employee-doc,
+  #printable-payslip,
   #printable-id-card {
     position: absolute !important;
     left: 0 !important;
@@ -73,9 +56,10 @@
     background: #ffffff !important;
     box-shadow: none !important;
     border: none !important;
+    z-index: 999999 !important;
   }
 
-  /* 5. Pagination structure (Page 1 & Page 2) */
+  /* 6. Page breaks for 2-page employee form document */
   .print-page-1 {
     page-break-after: always !important;
     break-after: page !important;
@@ -85,6 +69,7 @@
     padding-bottom: 0 !important;
     display: block !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .print-page-2 {
@@ -95,9 +80,10 @@
     padding-top: 5mm !important;
     display: block !important;
     width: 100% !important;
+    box-sizing: border-box !important;
   }
 
-  /* 6. Page setup */
+  /* 7. Paper margin & size */
   @page {
     size: A4 portrait;
     margin: 8mm;
