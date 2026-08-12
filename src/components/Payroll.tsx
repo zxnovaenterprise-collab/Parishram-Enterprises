@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   FileSpreadsheet, Upload, Download, FileCheck, Search, Filter, Plus, 
-  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle
+  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X
 } from 'lucide-react';
 import { PayrollRecord, CompanySettings } from '../types';
 import { formatINR, calculatePayrollRow } from '../lib/calculations';
@@ -162,7 +162,17 @@ export const Payroll: React.FC<PayrollProps> = ({
               className="px-3.5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow"
             >
               <Download className="w-4 h-4 text-emerald-400" />
-              Export All Data
+              Export Excel
+            </button>
+
+            {/* Print Master Payroll Sheet */}
+            <button
+              onClick={() => window.print()}
+              id="btn-print-master-payroll"
+              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-md shadow-blue-600/20"
+            >
+              <Printer className="w-4 h-4" />
+              Print Payroll Sheet
             </button>
 
             {/* Add Employee Row */}
@@ -250,7 +260,7 @@ export const Payroll: React.FC<PayrollProps> = ({
       </div>
 
       {/* Complete 33-Column Data Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden" id="printable-payroll-sheet">
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin">
           <table className="w-full text-left border-collapse text-[11px] font-sans">
             <thead className="bg-slate-900 text-slate-200 sticky top-0 z-20 uppercase font-semibold tracking-wider text-[10px]">
