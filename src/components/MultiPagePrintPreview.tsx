@@ -100,7 +100,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
           
           {/* ================= PAGE 1: EMPLOYMENT APPLICATION FORM ================= */}
           <div
-            className={`bg-white border border-slate-300 rounded-2xl p-6 sm:p-10 shadow-2xl mx-auto mb-8 print:shadow-none print:border-none print:rounded-none print:p-0 print:mb-0 print:max-w-none print-page-1 ${
+            className={`bg-white border border-slate-300 rounded-2xl p-6 sm:p-10 shadow-2xl mx-auto mb-8 print:shadow-none print:border-none print:rounded-none print:p-2 print:mb-0 print:max-w-none print-page-1 ${
               activeTab === 'page2' ? 'hidden print:block' : 'block'
             }`}
           >
@@ -309,7 +309,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
 
           {/* ================= PAGE 2: WORKER ID CARD & ATTACHED DOCUMENTS ================= */}
           <div
-            className={`bg-white border border-slate-300 rounded-2xl p-6 sm:p-10 shadow-2xl mx-auto print:shadow-none print:border-none print:rounded-none print:p-0 print:max-w-none print-page-2 ${
+            className={`bg-white border border-slate-300 rounded-2xl p-6 sm:p-10 shadow-2xl mx-auto print:shadow-none print:border-none print:rounded-none print:p-2 print:max-w-none print-page-2 ${
               activeTab === 'page1' ? 'hidden print:block' : 'block'
             }`}
           >

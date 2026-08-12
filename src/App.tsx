@@ -8,6 +8,7 @@ import { Form } from './components/Form';
 import { IDCard } from './components/IDCard';
 import { Settings } from './components/Settings';
 import { SalarySlipModal } from './components/SalarySlipModal';
+import { MultiPagePrintPreview } from './components/MultiPagePrintPreview';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -31,6 +32,9 @@ export default function App() {
 
   // Modal for salary slip print preview
   const [selectedPayslipRecord, setSelectedPayslipRecord] = useState<PayrollRecord | null>(null);
+
+  // Modal for 2-Page Employee Application Form & ID Card + Docs print preview
+  const [previewEmployee, setPreviewEmployee] = useState<EmployeeForm | null>(null);
 
   // Sync state to LocalStorage
   useEffect(() => {
@@ -57,7 +61,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
-      {/* Header */}
+      {/* Header (Hidden during Print) */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -67,8 +71,8 @@ export default function App() {
         setSelectedMonth={setSelectedMonth}
       />
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content Area (Hidden during Print to exclude Portal UI) */}
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 print:hidden">
         {activeTab === 'dashboard' && (
           <Dashboard
             payrollRecords={payrollRecords}
@@ -93,6 +97,7 @@ export default function App() {
             employees={employees}
             setEmployees={setEmployees}
             settings={settings}
+            onOpenPreview={(emp) => setPreviewEmployee(emp)}
           />
         )}
 
@@ -115,6 +120,15 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* 2-Page Employee Application Form & Document Print Preview Modal */}
+      {previewEmployee && (
+        <MultiPagePrintPreview
+          employee={previewEmployee}
+          settings={settings}
+          onClose={() => setPreviewEmployee(null)}
+        />
+      )}
 
       {/* Salary Slip Print Modal */}
       {selectedPayslipRecord && (

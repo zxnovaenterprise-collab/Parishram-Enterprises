@@ -11,12 +11,14 @@ interface FormProps {
   employees: EmployeeForm[];
   setEmployees: React.Dispatch<React.SetStateAction<EmployeeForm[]>>;
   settings: CompanySettings;
+  onOpenPreview?: (emp: EmployeeForm) => void;
 }
 
 export const Form: React.FC<FormProps> = ({
   employees,
   setEmployees,
   settings,
+  onOpenPreview,
 }) => {
   // Form State
   const [formData, setFormData] = useState<Partial<EmployeeForm>>({
@@ -169,7 +171,11 @@ export const Form: React.FC<FormProps> = ({
     showToast(`Employee "${newEmp.fullName}" saved successfully!`);
 
     // Open 2-Page Print preview immediately
-    setPreviewEmployee(newEmp);
+    if (onOpenPreview) {
+      onOpenPreview(newEmp);
+    } else {
+      setPreviewEmployee(newEmp);
+    }
 
     // Reset Form
     setFormData({
@@ -709,7 +715,7 @@ export const Form: React.FC<FormProps> = ({
                       </div>
                       <div className="flex items-center gap-1">
                         <button
-                          onClick={() => setPreviewEmployee(emp)}
+                          onClick={() => onOpenPreview ? onOpenPreview(emp) : setPreviewEmployee(emp)}
                           id={`btn-view-doc-${emp.cardNo}`}
                           title="View & Print Application Form"
                           className="px-2.5 py-1.5 bg-blue-600 text-white rounded-lg text-[11px] font-bold flex items-center gap-1 hover:bg-blue-500 cursor-pointer shadow"
