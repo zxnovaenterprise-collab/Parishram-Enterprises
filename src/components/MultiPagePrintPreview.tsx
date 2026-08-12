@@ -1,5 +1,5 @@
 import React from 'react';
-import { Printer, X, FileText, ShieldCheck, CheckCircle2, Building2 } from 'lucide-react';
+import { Printer, X, ShieldCheck, CreditCard, FileCheck2, UserCheck } from 'lucide-react';
 import { EmployeeForm, CompanySettings } from '../types';
 
 interface MultiPagePrintPreviewProps {
@@ -23,14 +23,18 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
   // Calculate total compensation
   const computedTotal = (employee.baseRate || 0) + (employee.bonus || 0) + (employee.hraRate || 0);
 
+  const displaySite = employee.siteLocation || settings.companySite || 'WESTERN REFRIGERATION PVT LTD';
+  const displayCompany = settings.companyName || 'PARISHRAM ENTERPRISES';
+  const displaySubTitle = settings.companySubTitle || 'Manpower Supply & Labour Contractor';
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 overflow-y-auto print:p-0 print:bg-white print:static">
       <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full border border-slate-200 overflow-hidden print:shadow-none print:border-none print:max-w-none print:w-full">
         {/* Action Header bar (hidden during print) */}
         <div className="bg-slate-900 text-white px-6 py-4 flex items-center justify-between sticky top-0 z-10 print:hidden border-b border-slate-800">
           <div className="flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-400" />
-            <h3 className="text-sm font-bold">Official Application Form & Document Attachment (2 Pages)</h3>
+            <FileCheck2 className="w-5 h-5 text-blue-400" />
+            <h3 className="text-sm font-bold">Official Application Form & Worker Document Record (2 Pages)</h3>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -39,7 +43,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow cursor-pointer transition-all"
             >
               <Printer className="w-4 h-4" />
-              Print / Save PDF (2 Pages)
+              Print / Save PDF (Both Pages)
             </button>
             <button
               onClick={onClose}
@@ -53,7 +57,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
         </div>
 
         {/* Print Document Body */}
-        <div className="p-8 font-sans text-slate-900 print:p-6 bg-white" id="printable-employee-doc">
+        <div className="p-8 font-sans text-slate-900 print:p-0 bg-white" id="printable-employee-doc">
           
           {/* ================= PAGE 1: EMPLOYMENT APPLICATION FORM (EXACT MATCHING SCREENSHOT) ================= */}
           <div className="print-page-1 min-h-[960px] flex flex-col justify-between border-b-2 border-slate-300 pb-8 mb-8 print:border-none print:mb-0 print:pb-0 print:min-h-0">
@@ -68,13 +72,13 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
                   </div>
                   <div>
                     <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
-                      {settings.companyName || 'PARISHRAM ENTERPRISES'}
+                      {displayCompany}
                     </h1>
                     <p className="text-xs font-bold text-slate-700">
-                      {settings.companySubTitle || 'Manpower Supply & Labour Contractor'}
+                      {displaySubTitle}
                     </p>
                     <p className="text-xs font-extrabold text-slate-900 uppercase tracking-wide mt-1">
-                      SITE: {employee.siteLocation || settings.companySite || 'WESTERN REFRIGERATION PVT LTD'}
+                      SITE: {displaySite}
                     </p>
                   </div>
                 </div>
@@ -101,13 +105,13 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
                 </div>
               </div>
 
-              {/* Boxed Grid Layout (1px/2px solid dark borders matching prompt screenshot) */}
+              {/* Boxed Grid Layout matching provided reference */}
               <div className="border-2 border-slate-900 divide-y-2 divide-slate-900 text-xs text-slate-900 font-medium">
                 
                 {/* Row 1: Company / Site */}
                 <div className="p-2.5 bg-slate-50/50">
                   <span className="text-[10px] font-extrabold uppercase text-slate-600 block mb-0.5">COMPANY / SITE:</span>
-                  <p className="font-extrabold text-sm uppercase text-slate-900">{employee.siteLocation || settings.companySite || 'WESTERN REFRIGERATION PVT LTD'}</p>
+                  <p className="font-extrabold text-sm uppercase text-slate-900">{displaySite}</p>
                 </div>
 
                 {/* Row 2: Name | Father Name */}
@@ -168,19 +172,19 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
                 <div className="grid grid-cols-4 divide-x-2 divide-slate-900">
                   <div className="p-2.5">
                     <span className="text-[10px] font-extrabold uppercase text-slate-600 block mb-0.5">RATE:</span>
-                    <p className="font-extrabold text-xs text-slate-900 font-mono">₹{employee.baseRate || 0}</p>
+                    <p className="font-extrabold text-xs text-slate-900 font-mono">{employee.baseRate || 0}</p>
                   </div>
                   <div className="p-2.5">
                     <span className="text-[10px] font-extrabold uppercase text-slate-600 block mb-0.5">BONUS:</span>
-                    <p className="font-extrabold text-xs text-slate-900 font-mono">₹{employee.bonus || 0}</p>
+                    <p className="font-extrabold text-xs text-slate-900 font-mono">{employee.bonus || 0}</p>
                   </div>
                   <div className="p-2.5">
                     <span className="text-[10px] font-extrabold uppercase text-slate-600 block mb-0.5">HRA:</span>
-                    <p className="font-extrabold text-xs text-slate-900 font-mono">₹{employee.hraRate || 0}</p>
+                    <p className="font-extrabold text-xs text-slate-900 font-mono">{employee.hraRate || 0}</p>
                   </div>
                   <div className="p-2.5 bg-slate-50">
                     <span className="text-[10px] font-extrabold uppercase text-slate-600 block mb-0.5">TOTAL:</span>
-                    <p className="font-extrabold text-xs text-slate-900 font-mono">₹{employee.totalComp || computedTotal}</p>
+                    <p className="font-extrabold text-xs text-slate-900 font-mono">{employee.totalComp || computedTotal}</p>
                   </div>
                 </div>
 
@@ -236,7 +240,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
 
             </div>
 
-            {/* Bottom Signature Lines (Exact matching screenshot: 3 signature lines) */}
+            {/* Bottom Signature Lines */}
             <div className="pt-16 grid grid-cols-3 gap-8 text-center text-xs font-bold text-slate-900">
               <div>
                 <div className="border-t-2 border-slate-900 pt-2 tracking-wider">
@@ -257,110 +261,238 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
 
           </div>
 
-          {/* ================= PAGE 2: CAPTURED DOCUMENT IMAGES (FRONT & BACK) ================= */}
+          {/* ================= PAGE 2: ID CARD (FRONT & BACKSIDE) AND ATTACHED DOCUMENTS ================= */}
           <div className="print-page-2 min-h-[960px] flex flex-col justify-between pt-4 print:pt-0 print:min-h-0">
             <div>
               {/* Page 2 Header */}
-              <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-center">
+              <div className="border-b-2 border-slate-900 pb-3 mb-6 flex justify-between items-center">
                 <div>
-                  <h1 className="text-xl font-extrabold uppercase tracking-tight text-slate-900">{settings.companyName || 'PARISHRAM ENTERPRISES'}</h1>
-                  <p className="text-xs text-slate-600 font-semibold">Attached Identity Document Record (Aadhaar / PAN Card) | Page 2 of 2</p>
+                  <h1 className="text-xl font-extrabold uppercase tracking-tight text-slate-900">{displayCompany}</h1>
+                  <p className="text-xs text-slate-700 font-bold">
+                    WORKER ID CARD (FRONT & BACKSIDE) & ATTACHED DOCUMENTS | Page 2 of 2
+                  </p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xs font-mono font-bold bg-slate-100 border border-slate-300 px-3 py-1 rounded">
+                  <span className="text-xs font-mono font-bold bg-slate-100 border border-slate-400 px-3 py-1 rounded text-slate-900">
                     CARD NO: {employee.cardNo}
                   </span>
                 </div>
               </div>
 
-              <div className="bg-slate-50 border border-slate-200 p-4 rounded-lg mb-6 flex items-center justify-between">
-                <div>
-                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600" />
-                    Verified Identity Document Attachment
+              {/* ---------------- SECTION 1: WORKER ID CARD (FRONT & BACKSIDE) ---------------- */}
+              <div className="mb-8">
+                <div className="flex items-center gap-2 mb-4 pb-1 border-b border-slate-300">
+                  <CreditCard className="w-5 h-5 text-blue-700" />
+                  <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-900">
+                    1. OFFICIAL WORKER IDENTIFICATION CARD (FRONT & BACKSIDE)
                   </h2>
-                  <p className="text-xs text-slate-600 mt-0.5">
-                    Captured via Camera Module & Verified for Personnel Files.
-                  </p>
                 </div>
-                {primaryDoc && (
-                  <span className="px-3 py-1 bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded">
-                    {primaryDoc.type}
-                  </span>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 justify-items-center">
+                  
+                  {/* === ID CARD - FRONT SIDE === */}
+                  <div className="w-[340px] h-[220px] bg-white border-2 border-slate-900 rounded-xl overflow-hidden shadow-md flex flex-col justify-between relative print:shadow-none">
+                    {/* Top Company Bar */}
+                    <div className="bg-slate-900 text-white p-2.5 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className="text-xs font-black tracking-wider text-amber-400 uppercase">{displayCompany}</span>
+                      </div>
+                      <p className="text-[9px] text-slate-300 font-semibold uppercase tracking-tight leading-none mt-0.5">
+                        {displaySubTitle}
+                      </p>
+                      <p className="text-[8px] text-amber-300 font-black uppercase mt-0.5 tracking-wider">
+                        SITE: {displaySite}
+                      </p>
+                    </div>
+
+                    {/* Middle Details & Photo */}
+                    <div className="p-3 flex gap-3 items-center flex-1">
+                      {/* Photo */}
+                      <div className="w-20 h-24 border-2 border-slate-900 rounded bg-slate-100 overflow-hidden shrink-0 shadow-sm">
+                        {employee.photoUrl ? (
+                          <img src={employee.photoUrl} alt="ID Photo" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-[9px] text-slate-400 font-bold">PHOTO</div>
+                        )}
+                      </div>
+
+                      {/* Text Details */}
+                      <div className="flex-1 text-[11px] space-y-1 text-slate-900">
+                        <div>
+                          <span className="text-[8px] font-black text-slate-500 uppercase block leading-none">NAME</span>
+                          <span className="font-black text-xs uppercase text-slate-900 block leading-tight">{employee.fullName || 'TEST'}</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1 pt-0.5">
+                          <div>
+                            <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">CARD NO</span>
+                            <span className="font-extrabold text-xs text-blue-700 font-mono leading-tight">{employee.cardNo || '31'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">CATEGORY</span>
+                            <span className="font-bold text-[10px] uppercase text-slate-900 leading-tight">{employee.category || 'Skilled'}</span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-1">
+                          <div>
+                            <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">DEPT</span>
+                            <span className="font-bold text-[10px] uppercase text-slate-900 leading-tight">{employee.department || 'Assembly'}</span>
+                          </div>
+                          <div>
+                            <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">JOINING</span>
+                            <span className="font-bold text-[10px] font-mono text-slate-900 leading-tight">{employee.joiningDate || '2026-01-20'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom ID Badge Footer */}
+                    <div className="bg-slate-100 border-t border-slate-300 px-3 py-1 flex items-center justify-between text-[9px]">
+                      <span className="font-bold text-slate-700 uppercase">WORKER PASS</span>
+                      <span className="font-mono text-slate-900 font-bold">MOB: {employee.phone || '06359322504'}</span>
+                    </div>
+                  </div>
+
+                  {/* === ID CARD - BACKSIDE === */}
+                  <div className="w-[340px] h-[220px] bg-white border-2 border-slate-900 rounded-xl overflow-hidden shadow-md flex flex-col justify-between relative print:shadow-none">
+                    {/* Top Company Bar */}
+                    <div className="bg-slate-800 text-white p-2 text-center border-b border-slate-700">
+                      <span className="text-[10px] font-bold tracking-wider uppercase">IDENTITY CARD - BACKSIDE</span>
+                    </div>
+
+                    {/* Backside Details */}
+                    <div className="p-3 text-[10px] space-y-1.5 text-slate-900 flex-1">
+                      <div>
+                        <span className="text-[8px] font-black text-slate-500 uppercase block leading-none">FATHER / SPOUSE NAME</span>
+                        <span className="font-extrabold text-[11px] uppercase text-slate-900 block">{employee.fatherName || employee.fatherOrSpouseName || 'TEST'}</span>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-1">
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">UAN NO</span>
+                          <span className="font-bold text-[10px] text-slate-900 font-mono">{employee.uan || '101393585342'}</span>
+                        </div>
+                        <div>
+                          <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">AADHAR NO</span>
+                          <span className="font-bold text-[10px] text-slate-900 font-mono">{employee.esicNo || '886365497514'}</span>
+                        </div>
+                      </div>
+
+                      <div>
+                        <span className="text-[8px] font-bold text-slate-500 uppercase block leading-none">PRESENT ADDRESS</span>
+                        <span className="font-medium text-[9px] uppercase text-slate-800 line-clamp-2 block leading-tight">
+                          {employee.presentAddress || employee.address || 'UMBERGAON GIDC KK SILK MILLS UNIT 3'}
+                        </span>
+                      </div>
+
+                      <div className="pt-1 flex items-center justify-between border-t border-slate-200">
+                        <div>
+                          <span className="text-[7px] font-bold text-slate-500 uppercase block">EMERGENCY PHONE</span>
+                          <span className="font-bold text-[9px] font-mono text-slate-900">{employee.emergencyContact || employee.phone || '06359322504'}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-[7px] font-extrabold text-slate-700 uppercase block">AUTH SIGNATORY</span>
+                          <span className="text-[8px] font-bold text-slate-900 font-serif border-t border-slate-400 pt-0.5 block">
+                            Parishram HR
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bottom Notice */}
+                    <div className="bg-slate-900 text-white px-3 py-1 text-center text-[8px] font-medium">
+                      If found, please return to Parishram Enterprises / Site Office
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* ---------------- SECTION 2: CAPTURED DOCUMENT IMAGES (FRONT & BACKSIDE) ---------------- */}
+              <div>
+                <div className="flex items-center justify-between mb-3 pb-1 border-b border-slate-300">
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-700" />
+                    <h2 className="text-sm font-extrabold uppercase tracking-wider text-slate-900">
+                      2. ATTACHED IDENTITY DOCUMENTS (AADHAAR / PAN CARD SNAPSHOTS)
+                    </h2>
+                  </div>
+                  {primaryDoc && (
+                    <span className="px-2.5 py-0.5 bg-emerald-100 border border-emerald-300 text-emerald-800 text-xs font-bold rounded">
+                      {primaryDoc.type}
+                    </span>
+                  )}
+                </div>
+
+                {primaryDoc ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Document Front Side */}
+                    <div className="border-2 border-slate-900 rounded-lg p-3 bg-white">
+                      <div className="flex justify-between items-center mb-2 border-b pb-1 border-slate-300">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                          FRONT SIDE - {primaryDoc.type}
+                        </span>
+                        <span className="text-[10px] text-slate-600 font-mono">
+                          {primaryDoc.capturedAt || 'Verified Snapshot'}
+                        </span>
+                      </div>
+                      <div className="w-full flex justify-center bg-slate-50 p-2 rounded border border-slate-300 min-h-[160px]">
+                        {primaryDoc.frontImage ? (
+                          <img
+                            src={primaryDoc.frontImage}
+                            alt="Front Document"
+                            className="max-h-[180px] w-auto object-contain rounded border border-slate-300 shadow-sm"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center text-slate-400 text-xs">Front image snapshot unavailable</div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Document Back Side */}
+                    <div className="border-2 border-slate-900 rounded-lg p-3 bg-white">
+                      <div className="flex justify-between items-center mb-2 border-b pb-1 border-slate-300">
+                        <span className="text-xs font-black text-slate-900 uppercase tracking-wide">
+                          BACKSIDE - {primaryDoc.type}
+                        </span>
+                        <span className="text-[10px] text-slate-600 font-mono">
+                          Address & QR Details
+                        </span>
+                      </div>
+                      <div className="w-full flex justify-center bg-slate-50 p-2 rounded border border-slate-300 min-h-[160px]">
+                        {primaryDoc.backImage ? (
+                          <img
+                            src={primaryDoc.backImage}
+                            alt="Back Document"
+                            className="max-h-[180px] w-auto object-contain rounded border border-slate-300 shadow-sm"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center text-slate-400 text-xs text-center p-6">
+                            {primaryDoc.type === 'PAN Card'
+                              ? 'PAN Card is a single-sided ID document.'
+                              : 'Backside camera snapshot unavailable.'}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center border-2 border-dashed border-slate-300 rounded-xl text-slate-500 text-xs font-medium">
+                    No camera captured Aadhaar / PAN document image attached for this worker.
+                  </div>
                 )}
               </div>
 
-              {/* Document Images Display: Front Side & Back Side */}
-              {primaryDoc ? (
-                <div className="space-y-6">
-                  {/* Front Side Document Image */}
-                  <div className="border-2 border-slate-300 rounded-xl p-4 bg-white shadow-sm">
-                    <div className="flex justify-between items-center mb-3 border-b pb-2 border-slate-200">
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-blue-600"></span>
-                        1. {primaryDoc.type} - FRONT SIDE IMAGE
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-mono">
-                        Captured: {primaryDoc.capturedAt || 'Verified Snapshot'}
-                      </span>
-                    </div>
-
-                    <div className="w-full flex justify-center bg-slate-100 p-3 rounded-lg border border-slate-200 min-h-[220px]">
-                      {primaryDoc.frontImage ? (
-                        <img
-                          src={primaryDoc.frontImage}
-                          alt="Front Side Document"
-                          className="max-h-[300px] w-auto object-contain rounded border border-slate-300 shadow-sm"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center text-slate-400 text-xs">Front image not captured</div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Back Side Document Image (Just inside / underneath Front Side on Page 2) */}
-                  <div className="border-2 border-slate-300 rounded-xl p-4 bg-white shadow-sm">
-                    <div className="flex justify-between items-center mb-3 border-b pb-2 border-slate-200">
-                      <span className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-2">
-                        <span className="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>
-                        2. {primaryDoc.type} - BACK SIDE IMAGE
-                      </span>
-                      <span className="text-[11px] text-slate-500 font-mono">
-                        {primaryDoc.type === 'Aadhaar Card' ? 'Address & QR Back Side' : 'Secondary Verification Image'}
-                      </span>
-                    </div>
-
-                    <div className="w-full flex justify-center bg-slate-100 p-3 rounded-lg border border-slate-200 min-h-[220px]">
-                      {primaryDoc.backImage ? (
-                        <img
-                          src={primaryDoc.backImage}
-                          alt="Back Side Document"
-                          className="max-h-[300px] w-auto object-contain rounded border border-slate-300 shadow-sm"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center text-slate-400 text-xs p-8 text-center">
-                          {primaryDoc.type === 'PAN Card'
-                            ? 'PAN Card is a single-sided identification document.'
-                            : 'Back side image not attached.'}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="p-12 text-center border-2 border-dashed border-slate-300 rounded-xl text-slate-500 text-xs">
-                  No camera captured document attached for this employee yet.
-                </div>
-              )}
             </div>
 
             {/* Page 2 Bottom Footer Verification Stamp */}
-            <div className="pt-8 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+            <div className="pt-6 border-t-2 border-slate-900 flex items-center justify-between text-xs text-slate-900 font-bold">
               <div>
-                <span>Verified By: <strong>{settings.signatoryName || 'Parishram Enterprises HR'}</strong></span>
+                <span>Official Record Verified By: <strong>{settings.signatoryName || 'Parishram Enterprises HR'}</strong></span>
               </div>
-              <div className="font-mono text-[10px] text-slate-400">
-                End of Official Employee Record | Page 2 of 2
+              <div className="font-mono text-[11px] text-slate-700">
+                End of Personnel Record | Page 2 of 2
               </div>
             </div>
           </div>
@@ -369,11 +501,11 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
 
         {/* Action Footer Bar (Hidden during Print) */}
         <div className="bg-slate-100 px-6 py-4 border-t border-slate-200 flex items-center justify-between sticky bottom-0 z-10 print:hidden">
-          <span className="text-xs text-slate-500 font-medium">Parishram Enterprises Employment Form Preview</span>
+          <span className="text-xs text-slate-600 font-semibold">Parishram Enterprises Official Form & ID Card Print Preview</span>
           <div className="flex items-center gap-3">
             <button
               onClick={handlePrint}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow cursor-pointer transition-all"
+              className="flex items-center gap-2 px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-xl shadow cursor-pointer transition-all"
             >
               <Printer className="w-4 h-4" />
               Print Both Pages

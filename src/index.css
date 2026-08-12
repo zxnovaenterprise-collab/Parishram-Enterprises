@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @media print {
-  /* 1. Global Reset for Pure White Paper Output */
-  html, body {
+  /* 1. Reset Root and Page Canvas */
+  html, body, #root {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -15,29 +15,26 @@
     print-color-adjust: exact !important;
   }
 
-  /* 2. Hide everything in the DOM by default */
-  body * {
-    visibility: hidden !important;
-  }
-
-  /* 3. Hide web app layout components, headers, modals overlays, and action buttons */
+  /* 2. Hide non-printable interactive UI elements */
   header,
   nav,
   footer,
   aside,
-  main,
   button,
   .print\:hidden,
-  .backdrop-blur-sm,
-  .backdrop-blur-md,
-  [id^="btn-"] {
+  [id^="btn-"],
+  .no-print {
     display: none !important;
     visibility: hidden !important;
   }
 
-  /* 4. Reset modal overlays to static background */
+  /* 3. Keep layout containers visible without display:none so descendants can render */
+  main,
   .fixed,
-  .fixed.inset-0 {
+  .fixed.inset-0,
+  .backdrop-blur-sm,
+  .backdrop-blur-md,
+  .backdrop-blur-lg {
     position: static !important;
     inset: auto !important;
     background: #ffffff !important;
@@ -46,10 +43,15 @@
     padding: 0 !important;
     margin: 0 !important;
     display: block !important;
+    visibility: visible !important;
     overflow: visible !important;
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+    border: none !important;
   }
 
-  /* 5. Make target printable containers and their children visible */
+  /* 4. Target printable document containers */
   #printable-payslip,
   #printable-payslip *,
   #printable-employee-doc,
@@ -59,7 +61,6 @@
     visibility: visible !important;
   }
 
-  /* Absolute position printable containers at origin */
   #printable-payslip,
   #printable-employee-doc,
   #printable-id-card {
@@ -74,7 +75,7 @@
     border: none !important;
   }
 
-  /* 6. Enforce 2-page pagination structure */
+  /* 5. Pagination structure (Page 1 & Page 2) */
   .print-page-1 {
     page-break-after: always !important;
     break-after: page !important;
@@ -82,6 +83,8 @@
     break-inside: avoid !important;
     margin-bottom: 0 !important;
     padding-bottom: 0 !important;
+    display: block !important;
+    width: 100% !important;
   }
 
   .print-page-2 {
@@ -89,12 +92,14 @@
     break-before: page !important;
     page-break-inside: avoid !important;
     break-inside: avoid !important;
-    padding-top: 10mm !important;
+    padding-top: 5mm !important;
+    display: block !important;
+    width: 100% !important;
   }
 
-  /* 7. Standard Page Setup */
+  /* 6. Page setup */
   @page {
     size: A4 portrait;
-    margin: 10mm;
+    margin: 8mm;
   }
 }
