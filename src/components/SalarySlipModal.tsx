@@ -57,18 +57,30 @@ export const SalarySlipModal: React.FC<SalarySlipModalProps> = ({
           <div className="p-8 text-slate-800 font-sans print:p-6" id="printable-payslip">
             {/* Header Block */}
             <div className="border-b-2 border-slate-900 pb-4 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h1 className="text-xl font-bold uppercase tracking-tight text-slate-900">{settings.companyName}</h1>
-                  <p className="text-xs text-slate-600 max-w-md mt-1">{settings.companyAddress}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">Phone: {settings.companyPhone} | Email: {settings.companyEmail}</p>
-                  {settings.companyGst && <p className="text-xs text-slate-500">GSTIN: {settings.companyGst}</p>}
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  {settings.companyLogo && (
+                    <img
+                      src={settings.companyLogo}
+                      alt="Company Logo"
+                      className="w-14 h-14 object-contain rounded-lg border border-slate-200 p-1 shrink-0"
+                    />
+                  )}
+                  <div>
+                    <h1 className="text-xl font-extrabold uppercase tracking-tight text-slate-900">{settings.companyName}</h1>
+                    <p className="text-xs text-slate-600 max-w-md mt-0.5">{settings.companyAddress}</p>
+                    <p className="text-[11px] text-slate-500 mt-0.5">Phone: {settings.companyPhone} | Email: {settings.companyEmail}</p>
+                    {settings.companyGst && <p className="text-[11px] text-slate-500">GSTIN: {settings.companyGst}</p>}
+                    <p className="text-[11px] text-blue-800 font-bold mt-1 uppercase">
+                      Contracted Client Worksite: {record.clientCompany || settings.companySite || 'WESTERN REFRIGERATION PVT LTD'}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="inline-block px-3 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-bold uppercase text-slate-700">
+                <div className="text-right shrink-0">
+                  <span className="inline-block px-3 py-1 bg-slate-100 border border-slate-300 rounded text-xs font-bold uppercase text-slate-700 shadow-sm">
                     Payslip for {record.monthYear}
                   </span>
-                  <p className="text-xs text-slate-400 mt-2">Generated: {new Date().toLocaleDateString('en-IN')}</p>
+                  <p className="text-[10px] text-slate-400 mt-2">Generated: {new Date().toLocaleDateString('en-IN')}</p>
                 </div>
               </div>
             </div>

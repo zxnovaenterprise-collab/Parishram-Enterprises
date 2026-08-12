@@ -6,6 +6,7 @@ import {
 import { EmployeeForm, DocumentType, DocumentUpload, CompanySettings } from '../types';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { MultiPagePrintPreview } from './MultiPagePrintPreview';
+import { SearchableCompanySelect } from './SearchableCompanySelect';
 
 interface FormProps {
   employees: EmployeeForm[];
@@ -270,13 +271,12 @@ export const Form: React.FC<FormProps> = ({
             {/* Top Row: Company / Site & Profile Photo Upload / Camera */}
             <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="flex-1 w-full text-xs">
-                <label className="block font-bold text-slate-800 uppercase mb-1">COMPANY / SITE *</label>
-                <input
-                  type="text"
-                  required
-                  value={formData.siteLocation}
-                  onChange={(e) => setFormData({ ...formData, siteLocation: e.target.value })}
-                  className="w-full p-2.5 bg-white border border-slate-300 rounded-xl font-extrabold text-slate-900 uppercase focus:ring-2 focus:ring-blue-500"
+                <label className="block font-bold text-slate-800 uppercase mb-1">WORKING CONTRACT COMPANY / SITE *</label>
+                <SearchableCompanySelect
+                  companies={settings.clientCompanies || ['WESTERN REFRIGERATION PVT LTD', 'STERLING GENERATORS PVT LTD', 'ALKEM LABORATORIES']}
+                  value={formData.siteLocation || ''}
+                  onChange={(val) => setFormData({ ...formData, siteLocation: val })}
+                  placeholder="Search or select client company..."
                 />
               </div>
 

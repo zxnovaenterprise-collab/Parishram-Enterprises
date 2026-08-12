@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { ActiveTab, CompanySettings, EmployeeForm, PayrollRecord } from './types';
-import { initialCompanySettings, sampleEmployees, samplePayrollRecords } from './data/initialData';
+import { ActiveTab, CompanySettings, EmployeeForm, PayrollRecord, PortalUser } from './types';
+import { initialCompanySettings, sampleEmployees, samplePayrollRecords, defaultPortalUsers } from './data/initialData';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Payroll } from './components/Payroll';
@@ -9,10 +9,22 @@ import { IDCard } from './components/IDCard';
 import { Settings } from './components/Settings';
 import { SalarySlipModal } from './components/SalarySlipModal';
 import { MultiPagePrintPreview } from './components/MultiPagePrintPreview';
+import { LoginModal } from './components/LoginModal';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [selectedMonth, setSelectedMonth] = useState<string>('2026-08');
+
+  // Users & Authentication State
+  const [users, setUsers] = useState<PortalUser[]>(() => {
+    const saved = localStorage.getItem('apex_portal_users');
+    return saved ? JSON.parse(saved) : defaultPortalUsers;
+  });
+
+  const [currentUser, setCurrentUser] = useState<PortalUser | null>(() => {
+    const saved = localStorage.getItem('apex_current_user');
+    return saved ? JSON.parse(saved) : null;
+  });
 
   // LocalStorage state initialization
   const [settings, setSettings] = useState<CompanySettings>(() => {
@@ -38,6 +50,18 @@ export default function App() {
 
   // Sync state to LocalStorage
   useEffect(() => {
+    localStorage.setItem('apex_portal_users', JSON.stringify(users));
+  }, [users]);
+
+  useEffect(() => {
+    if (currentUser) {
+      localStorage.setItem('apex_current_user', JSON.stringify(currentUser));
+    } else {
+      localStorage.removeItem('apex_current_user');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     localStorage.setItem('apex_company_settings', JSON.stringify(settings));
   }, [settings]);
 
@@ -49,15 +73,35 @@ export default function App() {
     localStorage.setItem('apex_payroll_records', JSON.stringify(payrollRecords));
   }, [payrollRecords]);
 
+  // Login handler
+  const handleLogin = (user: PortalUser) => {
+    setCurrentUser(user);
+    // Switch to first allowed tab if current activeTab is not permitted
+    if (!user.allowedTabs.includes(activeTab)) {
+      setActiveTab(user.allowedTabs[0] || 'dashboard');
+    }
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    setCurrentUser(null);
+  };
+
   // Reset to initial sample dataset
   const handleResetData = () => {
     if (confirm('Are you sure you want to reset all data back to original sample records?')) {
       setSettings(initialCompanySettings);
       setEmployees(sampleEmployees);
       setPayrollRecords(samplePayrollRecords);
+      setUsers(defaultPortalUsers);
       localStorage.clear();
     }
   };
+
+  // If user is not logged in, display the security login modal
+  if (!currentUser) {
+    return <LoginModal users={users} onLogin={handleLogin} settings={settings} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
@@ -69,11 +113,13 @@ export default function App() {
         employeeCount={employees.length}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
+        currentUser={currentUser}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Area (Hidden during Print to exclude Portal UI) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 print:hidden">
-        {activeTab === 'dashboard' && (
+        {activeTab === 'dashboard' && currentUser.allowedTabs.includes('dashboard') && (
           <Dashboard
             payrollRecords={payrollRecords}
             employees={employees}
@@ -83,7 +129,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'payroll' && (
+        {activeTab === 'payroll' && currentUser.allowedTabs.includes('payroll') && (
           <Payroll
             records={payrollRecords}
             setRecords={setPayrollRecords}
@@ -92,7 +138,7 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'form' && (
+        {activeTab === 'form' && currentUser.allowedTabs.includes('form') && (
           <Form
             employees={employees}
             setEmployees={setEmployees}
@@ -101,14 +147,14 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'idcard' && (
+        {activeTab === 'idcard' && currentUser.allowedTabs.includes('idcard') && (
           <IDCard
             employees={employees}
             settings={settings}
           />
         )}
 
-        {activeTab === 'settings' && (
+        {activeTab === 'settings' && currentUser.allowedTabs.includes('settings') && (
           <Settings
             settings={settings}
             setSettings={setSettings}
@@ -117,6 +163,8 @@ export default function App() {
             payrollRecords={payrollRecords}
             setPayrollRecords={setPayrollRecords}
             onResetData={handleResetData}
+            users={users}
+            setUsers={setUsers}
           />
         )}
       </main>

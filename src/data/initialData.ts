@@ -1,10 +1,18 @@
-import { PayrollRecord, EmployeeForm, CompanySettings } from '../types';
+import { PayrollRecord, EmployeeForm, CompanySettings, PortalUser } from '../types';
 import { calculatePayrollRow } from '../lib/calculations';
 
 export const initialCompanySettings: CompanySettings = {
   companyName: 'PARISHRAM ENTERPRISES',
   companySubTitle: 'Manpower Supply & Labour Contractor',
   companySite: 'WESTERN REFRIGERATION PVT LTD',
+  clientCompanies: [
+    'WESTERN REFRIGERATION PVT LTD',
+    'STERLING GENERATORS PVT LTD',
+    'ALKEM LABORATORIES LTD',
+    'TATA STEEL BSL LTD',
+    'AMNEAL PHARMACEUTICALS',
+    'SUN PHARMA INDUSTRIES',
+  ],
   companyAddress: 'SITE: WESTERN REFRIGERATION PVT LTD, GIDC Area, Umbergaon, Gujarat',
   companyPhone: '06359322504',
   companyEmail: 'contact@parishramenterprises.com',
@@ -233,3 +241,31 @@ export const samplePayrollRecords: PayrollRecord[] = [
     designation: 'Electrical Technician',
   }),
 ];
+
+export const defaultPortalUsers: PortalUser[] = [
+  {
+    id: 'usr_admin',
+    username: 'admin',
+    password: 'admin123',
+    fullName: 'Rajesh Sharma (Admin)',
+    role: 'System Administrator',
+    allowedTabs: ['dashboard', 'payroll', 'form', 'idcard', 'settings'],
+  },
+  {
+    id: 'usr_hr',
+    username: 'hr_staff',
+    password: 'hr123',
+    fullName: 'Priya Verma',
+    role: 'HR Officer',
+    allowedTabs: ['dashboard', 'form', 'idcard'],
+  },
+  {
+    id: 'usr_payroll',
+    username: 'payroll_user',
+    password: 'pay123',
+    fullName: 'Amit Kumar',
+    role: 'Payroll Accountant',
+    allowedTabs: ['dashboard', 'payroll'],
+  },
+];
+

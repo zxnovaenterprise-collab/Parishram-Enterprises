@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { 
   FileSpreadsheet, Upload, Download, FileCheck, Search, Filter, Plus, 
-  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X
+  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X, Building
 } from 'lucide-react';
 import { PayrollRecord, CompanySettings } from '../types';
 import { formatINR, calculatePayrollRow } from '../lib/calculations';
 import { downloadSampleExcel, exportPayrollToExcel, parseExcelOrCsvFile } from '../lib/excel';
+import { SearchableCompanySelect } from './SearchableCompanySelect';
 
 interface PayrollProps {
   records: PayrollRecord[];
@@ -22,6 +23,7 @@ export const Payroll: React.FC<PayrollProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('ALL');
+  const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('ALL');
   
   // Modal states
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
@@ -36,15 +38,26 @@ export const Payroll: React.FC<PayrollProps> = ({
       r.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.cardNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
       r.uan.includes(searchTerm) ||
-      r.accountNumber.includes(searchTerm);
+      r.accountNumber.includes(searchTerm) ||
+      (r.clientCompany && r.clientCompany.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesAgent = selectedAgentFilter === 'ALL' || r.agt === selectedAgentFilter;
+    const matchesCompany =
+      selectedCompanyFilter === 'ALL' ||
+      (r.clientCompany && r.clientCompany.toUpperCase() === selectedCompanyFilter.toUpperCase()) ||
+      (!r.clientCompany && selectedCompanyFilter === settings.companySite);
 
-    return matchesSearch && matchesAgent;
+    return matchesSearch && matchesAgent && matchesCompany;
   });
 
-  // Agents list
+  // Agents and Companies list
   const uniqueAgents = Array.from(new Set(records.map((r) => r.agt).filter(Boolean)));
+  const uniqueCompanies = Array.from(
+    new Set([
+      ...(settings.clientCompanies || []),
+      ...records.map((r) => r.clientCompany).filter((c): c is string => Boolean(c)),
+    ])
+  );
 
   // File Import handler
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -240,21 +253,40 @@ export const Payroll: React.FC<PayrollProps> = ({
             />
           </div>
 
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter className="w-4 h-4 text-slate-400" />
-            <span className="text-xs text-slate-500">AGT / Contractor:</span>
-            <select
-              value={selectedAgentFilter}
-              onChange={(e) => setSelectedAgentFilter(e.target.value)}
-              className="bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
-            >
-              <option value="ALL">All AGT / Contractors</option>
-              {uniqueAgents.map((agt) => (
-                <option key={agt} value={agt}>
-                  {agt}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5">
+              <Building className="w-4 h-4 text-blue-600 shrink-0" />
+              <span className="text-xs text-slate-500 font-semibold">Company:</span>
+              <select
+                value={selectedCompanyFilter}
+                onChange={(e) => setSelectedCompanyFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer uppercase"
+              >
+                <option value="ALL">ALL COMPANIES</option>
+                {uniqueCompanies.map((comp) => (
+                  <option key={comp} value={comp}>
+                    {comp}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-center gap-1.5">
+              <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="text-xs text-slate-500 font-semibold">AGT:</span>
+              <select
+                value={selectedAgentFilter}
+                onChange={(e) => setSelectedAgentFilter(e.target.value)}
+                className="bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold text-slate-800 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              >
+                <option value="ALL">All AGT / Contractors</option>
+                {uniqueAgents.map((agt) => (
+                  <option key={agt} value={agt}>
+                    {agt}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -454,6 +486,16 @@ export const Payroll: React.FC<PayrollProps> = ({
             </div>
 
             <form onSubmit={handleSaveAddEdit} className="p-6 space-y-4 text-xs">
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                <label className="block text-slate-800 font-bold mb-1 uppercase">WORKING CONTRACT COMPANY / SITE *</label>
+                <SearchableCompanySelect
+                  companies={settings.clientCompanies || ['WESTERN REFRIGERATION PVT LTD', 'STERLING GENERATORS PVT LTD', 'ALKEM LABORATORIES']}
+                  value={editingRecord.clientCompany || settings.companySite || ''}
+                  onChange={(val) => setEditingRecord({ ...editingRecord, clientCompany: val })}
+                  placeholder="Search or select client company..."
+                />
+              </div>
+
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block text-slate-600 font-semibold mb-1">Card No / Emp ID</label>

@@ -114,10 +114,18 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
             <div className="flex items-start justify-between gap-4 mb-4 border-b-2 border-slate-900 pb-4">
               {/* Left: Logo & Company Name */}
               <div className="flex items-start gap-3">
-                <div className="w-14 h-14 bg-slate-900 text-white rounded-lg flex flex-col items-center justify-center font-black border-2 border-slate-900 shrink-0 shadow-sm">
-                  <span className="text-xl tracking-tighter font-serif text-amber-400">PE</span>
-                  <span className="text-[8px] font-sans tracking-widest text-slate-300">ESTD</span>
-                </div>
+                {settings.companyLogo ? (
+                  <img
+                    src={settings.companyLogo}
+                    alt="Company Logo"
+                    className="w-14 h-14 object-contain rounded-lg border-2 border-slate-900 p-1 shrink-0 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-14 h-14 bg-slate-900 text-white rounded-lg flex flex-col items-center justify-center font-black border-2 border-slate-900 shrink-0 shadow-sm">
+                    <span className="text-xl tracking-tighter font-serif text-amber-400">PE</span>
+                    <span className="text-[8px] font-sans tracking-widest text-slate-300">ESTD</span>
+                  </div>
+                )}
                 <div>
                   <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">
                     {displayCompany}

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { Settings as SettingsIcon, Building2, Save, RotateCcw, Download, Upload, CheckCircle2 } from 'lucide-react';
-import { CompanySettings, EmployeeForm, PayrollRecord } from '../types';
+import React, { useState, useRef } from 'react';
+import { 
+  Settings as SettingsIcon, Building2, Save, RotateCcw, Download, Upload, 
+  CheckCircle2, Plus, Trash2, Image as ImageIcon, Users, Key, Lock, ShieldCheck, 
+  X, Check, Sparkles, Building
+} from 'lucide-react';
+import { CompanySettings, EmployeeForm, PayrollRecord, PortalUser, ActiveTab } from '../types';
 
 interface SettingsProps {
   settings: CompanySettings;
@@ -10,6 +14,8 @@ interface SettingsProps {
   payrollRecords: PayrollRecord[];
   setPayrollRecords: React.Dispatch<React.SetStateAction<PayrollRecord[]>>;
   onResetData: () => void;
+  users: PortalUser[];
+  setUsers: React.Dispatch<React.SetStateAction<PortalUser[]>>;
 }
 
 export const Settings: React.FC<SettingsProps> = ({
@@ -20,9 +26,38 @@ export const Settings: React.FC<SettingsProps> = ({
   payrollRecords,
   setPayrollRecords,
   onResetData,
+  users,
+  setUsers,
 }) => {
-  const [formData, setFormData] = useState<CompanySettings>({ ...settings });
+  const [formData, setFormData] = useState<CompanySettings>({
+    ...settings,
+    clientCompanies: settings.clientCompanies || [
+      'WESTERN REFRIGERATION PVT LTD',
+      'STERLING GENERATORS PVT LTD',
+      'ALKEM LABORATORIES LTD',
+      'TATA STEEL BSL LTD',
+      'AMNEAL PHARMACEUTICALS',
+      'SUN PHARMA INDUSTRIES',
+    ],
+  });
+
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [newCompanyName, setNewCompanyName] = useState('');
+
+  // Logo file upload ref
+  const logoFileRef = useRef<HTMLInputElement>(null);
+
+  // New User Form State
+  const [newUsername, setNewUsername] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newFullName, setNewFullName] = useState('');
+  const [newRole, setNewRole] = useState('Staff');
+  const [newAllowedTabs, setNewAllowedTabs] = useState<ActiveTab[]>([
+    'dashboard',
+    'payroll',
+    'form',
+    'idcard',
+  ]);
 
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,12 +66,92 @@ export const Settings: React.FC<SettingsProps> = ({
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
+  // Handle Logo Upload
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      if (evt.target?.result) {
+        setFormData((prev) => ({ ...prev, companyLogo: evt.target?.result as string }));
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Add new Client Company
+  const handleAddCompany = () => {
+    const cleanName = newCompanyName.trim().toUpperCase();
+    if (!cleanName) return;
+
+    if (!formData.clientCompanies.includes(cleanName)) {
+      const updated = [...formData.clientCompanies, cleanName];
+      setFormData((prev) => ({ ...prev, clientCompanies: updated }));
+      setSettings((prev) => ({ ...prev, clientCompanies: updated }));
+    }
+    setNewCompanyName('');
+  };
+
+  // Remove Client Company
+  const handleRemoveCompany = (compName: string) => {
+    const updated = formData.clientCompanies.filter((c) => c !== compName);
+    setFormData((prev) => ({ ...prev, clientCompanies: updated }));
+    setSettings((prev) => ({ ...prev, clientCompanies: updated }));
+  };
+
+  // Add New Portal User
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newUsername || !newPassword || !newFullName) return;
+
+    const newUser: PortalUser = {
+      id: `usr_${Date.now()}`,
+      username: newUsername.trim(),
+      password: newPassword.trim(),
+      fullName: newFullName.trim(),
+      role: newRole.trim() || 'Portal User',
+      allowedTabs: newAllowedTabs,
+    };
+
+    setUsers((prev) => [...prev, newUser]);
+
+    // Reset User form
+    setNewUsername('');
+    setNewPassword('');
+    setNewFullName('');
+    setNewRole('Staff');
+    setNewAllowedTabs(['dashboard', 'payroll', 'form', 'idcard']);
+  };
+
+  // Toggle tab checkbox
+  const toggleTabPermission = (tab: ActiveTab) => {
+    if (newAllowedTabs.includes(tab)) {
+      if (newAllowedTabs.length === 1) return; // keep at least 1 tab
+      setNewAllowedTabs((prev) => prev.filter((t) => t !== tab));
+    } else {
+      setNewAllowedTabs((prev) => [...prev, tab]);
+    }
+  };
+
+  // Delete User
+  const handleDeleteUser = (userId: string) => {
+    if (users.length <= 1) {
+      alert('System requires at least one admin account.');
+      return;
+    }
+    if (confirm('Delete this user login account?')) {
+      setUsers((prev) => prev.filter((u) => u.id !== userId));
+    }
+  };
+
   // Export full app database as JSON
   const handleExportDatabase = () => {
     const fullState = {
       settings: formData,
       employees,
       payrollRecords,
+      users,
       exportedAt: new Date().toISOString(),
     };
 
@@ -60,6 +175,7 @@ export const Settings: React.FC<SettingsProps> = ({
         if (data.settings) setSettings(data.settings);
         if (data.employees) setEmployees(data.employees);
         if (data.payrollRecords) setPayrollRecords(data.payrollRecords);
+        if (data.users) setUsers(data.users);
 
         alert('Database restored successfully from backup!');
       } catch (err) {
@@ -69,6 +185,14 @@ export const Settings: React.FC<SettingsProps> = ({
     reader.readAsText(file);
   };
 
+  const allTabsList: { id: ActiveTab; label: string }[] = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'payroll', label: 'Payroll & Slips' },
+    { id: 'form', label: 'Worker Form & Docs' },
+    { id: 'idcard', label: 'ID Cards' },
+    { id: 'settings', label: 'Settings & Users' },
+  ];
+
   return (
     <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto">
       {/* Header */}
@@ -76,10 +200,10 @@ export const Settings: React.FC<SettingsProps> = ({
         <div>
           <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <SettingsIcon className="w-6 h-6 text-blue-600" />
-            Company & System Settings
+            System, Branding & User Access Settings
           </h2>
           <p className="text-xs text-slate-500 mt-1">
-            Configure company branding for payslips, default statutory rates, and system backup/restore.
+            Upload agency logo, manage contract companies list, assign user credentials, and set tab access rights.
           </p>
         </div>
 
@@ -91,23 +215,84 @@ export const Settings: React.FC<SettingsProps> = ({
         )}
       </div>
 
-      {/* Settings Form */}
-      <form onSubmit={handleSaveSettings} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
+      {/* Main Settings Form */}
+      <form onSubmit={handleSaveSettings} className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-8">
+        
+        {/* SECTION 1: Company Logo Upload */}
+        <div>
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <ImageIcon className="w-4 h-4 text-blue-600" />
+            Agency Official Logo (Appears on Portal, Slips & Forms)
+          </h3>
+
+          <div className="flex flex-col sm:flex-row items-center gap-6 bg-slate-50 p-4 rounded-2xl border border-slate-200">
+            <div className="w-24 h-24 bg-white rounded-2xl border-2 border-dashed border-slate-300 flex items-center justify-center p-2 shadow-sm shrink-0 overflow-hidden">
+              {formData.companyLogo ? (
+                <img src={formData.companyLogo} alt="Company Logo" className="max-w-full max-h-full object-contain" />
+              ) : (
+                <div className="text-center text-slate-400">
+                  <Building2 className="w-8 h-8 mx-auto mb-1 text-slate-300" />
+                  <span className="text-[9px] font-bold block">No Logo</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-2 text-xs">
+              <h4 className="font-bold text-slate-900">Upload Agency Logo Graphic</h4>
+              <p className="text-slate-500 text-[11px] leading-relaxed">
+                PNG or JPEG recommended (300x300px). This logo will appear at the top of the main portal header,
+                printed salary slips, employment application forms, and worker ID cards.
+              </p>
+
+              <div className="flex items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => logoFileRef.current?.click()}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl flex items-center gap-2 cursor-pointer shadow-md shadow-blue-600/20"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Select Image File
+                </button>
+
+                {formData.companyLogo && (
+                  <button
+                    type="button"
+                    onClick={() => setFormData((prev) => ({ ...prev, companyLogo: '' }))}
+                    className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-xl border border-rose-200 flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Remove Logo
+                  </button>
+                )}
+
+                <input
+                  ref={logoFileRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="hidden"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 2: Company Header & Contact Details */}
         <div>
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100 flex items-center gap-2">
             <Building2 className="w-4 h-4 text-blue-600" />
-            Company Identification & Header Info
+            Agency Name & Contact Header
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
             <div>
-              <label className="block font-semibold text-slate-700 mb-1">Company Name</label>
+              <label className="block font-semibold text-slate-700 mb-1">Main Agency Name</label>
               <input
                 type="text"
                 required
                 value={formData.companyName}
                 onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"
+                className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold uppercase"
               />
             </div>
 
@@ -132,7 +317,7 @@ export const Settings: React.FC<SettingsProps> = ({
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block font-semibold text-slate-700 mb-1">Full Company Address</label>
+              <label className="block font-semibold text-slate-700 mb-1">Full Registered Address</label>
               <input
                 type="text"
                 value={formData.companyAddress}
@@ -173,7 +358,62 @@ export const Settings: React.FC<SettingsProps> = ({
           </div>
         </div>
 
-        {/* Statutory Defaults */}
+        {/* SECTION 3: Contracting / Client Companies List */}
+        <div>
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 pb-2 border-b border-slate-100 flex items-center gap-2">
+            <Building className="w-4 h-4 text-blue-600" />
+            Contracted Client Companies / Work Sites
+          </h3>
+          <p className="text-xs text-slate-500 mb-4">
+            Parishram Enterprises provides labor to multiple client companies. Add company names here so they auto-appear in all dropdown search boxes.
+          </p>
+
+          <div className="space-y-4">
+            {/* Add New Company Box */}
+            <div className="flex items-center gap-2 bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+              <input
+                type="text"
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
+                placeholder="Enter client company name (e.g. TATA STEEL, ALKEM LABS)..."
+                className="flex-1 bg-white px-3 py-2 border border-slate-200 rounded-lg text-xs font-bold uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={handleAddCompany}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg flex items-center gap-1 cursor-pointer transition-all shadow"
+              >
+                <Plus className="w-4 h-4" />
+                Add Company
+              </button>
+            </div>
+
+            {/* List of Client Companies */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+              {formData.clientCompanies.map((comp) => (
+                <div
+                  key={comp}
+                  className="p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between text-xs shadow-sm hover:border-blue-300 transition-all"
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Building className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span className="font-bold text-slate-800 uppercase truncate">{comp}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveCompany(comp)}
+                    title="Delete Company"
+                    className="text-slate-400 hover:text-rose-600 cursor-pointer p-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* SECTION 4: Statutory Defaults */}
         <div className="pt-4 border-t border-slate-100">
           <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 pb-2 border-b border-slate-100">
             Statutory Percentage Defaults
@@ -224,6 +464,155 @@ export const Settings: React.FC<SettingsProps> = ({
           </button>
         </div>
       </form>
+
+      {/* SECTION 5: User Credentials & Tab Access Control */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-6">
+        <div>
+          <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-1 flex items-center gap-2">
+            <Users className="w-4 h-4 text-blue-600" />
+            User Login Credentials & Tab Access Control
+          </h3>
+          <p className="text-xs text-slate-500">
+            Create user accounts with custom User IDs and Passwords, and grant access ONLY to specific tabs.
+          </p>
+        </div>
+
+        {/* Add User Form */}
+        <form onSubmit={handleAddUser} className="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-4">
+          <h4 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+            <Plus className="w-4 h-4 text-blue-600" />
+            Create New User Account
+          </h4>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Full Name</label>
+              <input
+                type="text"
+                required
+                value={newFullName}
+                onChange={(e) => setNewFullName(e.target.value)}
+                placeholder="e.g. Ramesh Patel"
+                className="w-full p-2 bg-white border border-slate-300 rounded-xl"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">User ID / Username</label>
+              <input
+                type="text"
+                required
+                value={newUsername}
+                onChange={(e) => setNewUsername(e.target.value)}
+                placeholder="e.g. hr_ramesh"
+                className="w-full p-2 bg-white border border-slate-300 rounded-xl font-bold text-blue-700"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Password</label>
+              <input
+                type="text"
+                required
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="Set password"
+                className="w-full p-2 bg-white border border-slate-300 rounded-xl font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Role Title</label>
+              <input
+                type="text"
+                value={newRole}
+                onChange={(e) => setNewRole(e.target.value)}
+                placeholder="e.g. HR Executive"
+                className="w-full p-2 bg-white border border-slate-300 rounded-xl"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 mb-2 text-xs">
+              Permitted Tab Access Rights (Check tabs user can access):
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {allTabsList.map((tab) => {
+                const isChecked = newAllowedTabs.includes(tab.id);
+                return (
+                  <button
+                    type="button"
+                    key={tab.id}
+                    onClick={() => toggleTabPermission(tab.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold border flex items-center gap-1.5 transition-all cursor-pointer ${
+                      isChecked
+                        ? 'bg-blue-600 text-white border-blue-600 shadow'
+                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'
+                    }`}
+                  >
+                    {isChecked && <Check className="w-3.5 h-3.5" />}
+                    {tab.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="flex justify-end pt-2">
+            <button
+              type="submit"
+              className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow flex items-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4 text-emerald-400" />
+              Create User Account
+            </button>
+          </div>
+        </form>
+
+        {/* Existing Users List */}
+        <div className="space-y-3">
+          <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider">Active Portal Users ({users.length})</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {users.map((u) => (
+              <div
+                key={u.id}
+                className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm flex items-start justify-between gap-3"
+              >
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-xs text-slate-900">{u.fullName}</span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full">
+                      {u.role}
+                    </span>
+                  </div>
+
+                  <div className="text-[11px] text-slate-600 font-mono flex items-center gap-3">
+                    <span>User ID: <strong className="text-blue-700">{u.username}</strong></span>
+                    <span>Pass: <strong>{u.password}</strong></span>
+                  </div>
+
+                  <div className="flex flex-wrap gap-1 pt-1">
+                    {u.allowedTabs.map((tab) => (
+                      <span key={tab} className="text-[9px] font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded border border-slate-200 uppercase">
+                        {tab}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleDeleteUser(u.id)}
+                  title="Delete User Account"
+                  className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* Database Backup & Reset Box */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-6 space-y-4">

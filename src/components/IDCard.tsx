@@ -100,13 +100,17 @@ export const IDCard: React.FC<IDCardProps> = ({ employees, settings }) => {
               {/* FRONT OF ID CARD */}
               <div className="w-[320px] h-[500px] bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden flex flex-col justify-between relative print:shadow-none print:border-2 print:border-slate-800">
                 {/* Top Banner Header */}
-                <div className="bg-slate-900 text-white p-4 text-center relative overflow-hidden">
+                <div className="bg-slate-900 text-white p-3 text-center relative overflow-hidden flex items-center justify-center gap-2">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/10 rounded-full blur-xl pointer-events-none" />
-                  <div className="flex items-center justify-center gap-2 mb-1">
+                  {settings.companyLogo ? (
+                    <img src={settings.companyLogo} alt="Logo" className="w-6 h-6 object-contain rounded bg-white/10 p-0.5" />
+                  ) : (
                     <Building2 className="w-4 h-4 text-blue-400" />
-                    <span className="text-xs font-bold tracking-wider uppercase">{settings.companyName || 'Apex Engineering'}</span>
+                  )}
+                  <div>
+                    <span className="text-xs font-bold tracking-wider uppercase block leading-tight">{settings.companyName || 'PARISHRAM ENTERPRISES'}</span>
+                    <span className="text-[8px] text-slate-400 font-medium block">OFFICIAL WORKER PASS</span>
                   </div>
-                  <p className="text-[9px] text-slate-400 font-medium">OFFICIAL IDENTIFICATION CARD</p>
                 </div>
 
                 {/* Photo & Main Details */}

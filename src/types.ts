@@ -5,6 +5,7 @@ export interface PayrollRecord {
   uan: string;                 // UAN
   esicNo: string;              // ESIC
   name: string;                // NAME
+  clientCompany?: string;      // Working Company / Contracted Client Site
   days: number;                // DAYS
   hrs: number;                 // HRS
   ph: number;                  // PH (Paid/Public Holiday)
@@ -79,7 +80,7 @@ export interface EmployeeForm {
   totalComp: number;     // TOTAL
   nomineeName: string;
   nomineePhone: string;
-  siteLocation: string;  // SITE: WESTERN REFRIGERATION PVT LTD
+  siteLocation: string;  // SITE / CLIENT COMPANY e.g. WESTERN REFRIGERATION PVT LTD
   photoUrl?: string;
   documents: DocumentUpload[];
   createdAt: string;
@@ -102,7 +103,18 @@ export interface CompanySettings {
   ptThreshold: number;
   ptAmount: number;
   standardMonthDays: number;
+  clientCompanies: string[];  // List of client / contract companies
 }
 
 export type ActiveTab = 'dashboard' | 'payroll' | 'form' | 'idcard' | 'settings';
+
+export interface PortalUser {
+  id: string;
+  username: string;       // Login User ID
+  password: string;       // Password
+  fullName: string;
+  role: string;           // Designation / Role
+  allowedTabs: ActiveTab[]; // Permissions
+}
+
 
