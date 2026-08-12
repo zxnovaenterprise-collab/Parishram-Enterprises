@@ -56,7 +56,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
         <div className="p-8 font-sans text-slate-900 print:p-6 bg-white" id="printable-employee-doc">
           
           {/* ================= PAGE 1: EMPLOYMENT APPLICATION FORM (EXACT MATCHING SCREENSHOT) ================= */}
-          <div className="min-h-[1020px] flex flex-col justify-between border-b-2 border-slate-300 pb-8 mb-8 print:border-none print:mb-0 print:pb-0 print:break-after-page">
+          <div className="print-page-1 min-h-[960px] flex flex-col justify-between border-b-2 border-slate-300 pb-8 mb-8 print:border-none print:mb-0 print:pb-0 print:min-h-0">
             <div>
               {/* Header Layout */}
               <div className="flex items-start justify-between gap-4 mb-3 border-b-2 border-slate-900 pb-4">
@@ -258,7 +258,7 @@ export const MultiPagePrintPreview: React.FC<MultiPagePrintPreviewProps> = ({
           </div>
 
           {/* ================= PAGE 2: CAPTURED DOCUMENT IMAGES (FRONT & BACK) ================= */}
-          <div className="min-h-[1020px] flex flex-col justify-between pt-4 print:pt-6">
+          <div className="print-page-2 min-h-[960px] flex flex-col justify-between pt-4 print:pt-0 print:min-h-0">
             <div>
               {/* Page 2 Header */}
               <div className="border-b-2 border-slate-900 pb-4 mb-6 flex justify-between items-center">
