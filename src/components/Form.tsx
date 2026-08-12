@@ -3,16 +3,18 @@ import {
   UserPlus, Camera, Upload, CheckCircle2, FileText, ShieldCheck, 
   Trash2, Eye, Printer, AlertCircle, RefreshCw, Image as ImageIcon, X
 } from 'lucide-react';
-import { EmployeeForm, DocumentType, DocumentUpload, CompanySettings } from '../types';
+import { EmployeeForm, DocumentType, DocumentUpload, CompanySettings, PayrollRecord } from '../types';
 import { CameraCaptureModal } from './CameraCaptureModal';
 import { MultiPagePrintPreview } from './MultiPagePrintPreview';
 import { SearchableCompanySelect } from './SearchableCompanySelect';
+import { calculatePayrollRow } from '../lib/calculations';
 
 interface FormProps {
   employees: EmployeeForm[];
   setEmployees: React.Dispatch<React.SetStateAction<EmployeeForm[]>>;
   settings: CompanySettings;
   onOpenPreview?: (emp: EmployeeForm) => void;
+  setPayrollRecords?: React.Dispatch<React.SetStateAction<PayrollRecord[]>>;
 }
 
 export const Form: React.FC<FormProps> = ({
@@ -20,6 +22,7 @@ export const Form: React.FC<FormProps> = ({
   setEmployees,
   settings,
   onOpenPreview,
+  setPayrollRecords,
 }) => {
   // Form State
   const [formData, setFormData] = useState<Partial<EmployeeForm>>({
@@ -169,7 +172,25 @@ export const Form: React.FC<FormProps> = ({
     };
 
     setEmployees((prev) => [newEmp, ...prev]);
-    showToast(`Employee "${newEmp.fullName}" saved successfully!`);
+
+    if (setPayrollRecords) {
+      const newRecord = calculatePayrollRow({
+        sn: employees.length + 1,
+        cardNo: newEmp.cardNo,
+        name: newEmp.fullName,
+        days: 26,
+        rate: newEmp.baseRate || 850,
+        uan: newEmp.uan,
+        esicNo: newEmp.esicNo,
+        accountNumber: newEmp.accountNumber,
+        ifscCode: newEmp.ifscCode,
+        agt: newEmp.agt || 'PARISHRAM-01',
+        clientCompany: newEmp.siteLocation || settings.companySite || 'WESTERN REFRIGERATION PVT LTD',
+      });
+      setPayrollRecords((prev) => [newRecord, ...prev]);
+    }
+
+    showToast(`Employee "${newEmp.fullName}" saved and added to payroll!`);
 
     // Open 2-Page Print preview immediately
     if (onOpenPreview) {

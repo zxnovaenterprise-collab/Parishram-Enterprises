@@ -10,6 +10,7 @@ import { Settings } from './components/Settings';
 import { SalarySlipModal } from './components/SalarySlipModal';
 import { MultiPagePrintPreview } from './components/MultiPagePrintPreview';
 import { LoginModal } from './components/LoginModal';
+import { MobileBottomNav } from './components/MobileBottomNav';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
@@ -118,7 +119,7 @@ export default function App() {
       />
 
       {/* Main Content Area (Hidden during Print to exclude Portal UI) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 print:hidden">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 md:pb-8 print:hidden">
         {activeTab === 'dashboard' && currentUser.allowedTabs.includes('dashboard') && (
           <Dashboard
             payrollRecords={payrollRecords}
@@ -144,6 +145,7 @@ export default function App() {
             setEmployees={setEmployees}
             settings={settings}
             onOpenPreview={(emp) => setPreviewEmployee(emp)}
+            setPayrollRecords={setPayrollRecords}
           />
         )}
 
@@ -168,6 +170,14 @@ export default function App() {
           />
         )}
       </main>
+
+      {/* Responsive App Bottom Tab Bar for Mobile */}
+      <MobileBottomNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        currentUser={currentUser}
+        employeeCount={employees.length}
+      />
 
       {/* 2-Page Employee Application Form & Document Print Preview Modal */}
       {previewEmployee && (
