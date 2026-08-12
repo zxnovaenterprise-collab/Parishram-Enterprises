@@ -106,7 +106,18 @@ export interface CompanySettings {
   clientCompanies: string[];  // List of client / contract companies
 }
 
-export type ActiveTab = 'dashboard' | 'payroll' | 'form' | 'idcard' | 'settings';
+export type ActiveTab = 'dashboard' | 'payroll' | 'history' | 'form' | 'idcard' | 'settings';
+
+export interface PayrollHistoryBatch {
+  id: string;
+  batchName: string;         // e.g. "July 2026 Payroll - Sohoni Metals"
+  monthYear: string;         // e.g. "2026-08"
+  clientCompany?: string;    // Optional contract site tag
+  createdAt: string;         // ISO date timestamp
+  totalEmployees: number;
+  totalNetSalary: number;
+  records: PayrollRecord[];  // Snapshotted list of payroll records
+}
 
 export interface PortalUser {
   id: string;

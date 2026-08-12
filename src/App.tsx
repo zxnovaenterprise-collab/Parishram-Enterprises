@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { ActiveTab, CompanySettings, EmployeeForm, PayrollRecord, PortalUser } from './types';
+import { ActiveTab, CompanySettings, EmployeeForm, PayrollRecord, PortalUser, PayrollHistoryBatch } from './types';
 import { initialCompanySettings, sampleEmployees, samplePayrollRecords, defaultPortalUsers } from './data/initialData';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Payroll } from './components/Payroll';
+import { History } from './components/History';
 import { Form } from './components/Form';
 import { IDCard } from './components/IDCard';
 import { Settings } from './components/Settings';
@@ -16,9 +17,11 @@ import {
   subscribeEmployees, 
   subscribePayrollRecords, 
   subscribeSettings, 
+  subscribeHistoryBatches,
   saveBatchEmployeesToFirestore, 
   saveBatchPayrollRecordsToFirestore, 
   saveSettingsToFirestore,
+  saveHistoryBatchToFirestore,
   saveEmployeeToFirestore,
   savePayrollRecordToFirestore
 } from './lib/firebase';
@@ -57,6 +60,11 @@ export default function App() {
     return saved ? JSON.parse(saved) : samplePayrollRecords;
   });
 
+  const [historyBatches, setHistoryBatches] = useState<PayrollHistoryBatch[]>(() => {
+    const saved = localStorage.getItem('apex_payroll_history_batches');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   // Real-time Firestore Subscriptions
   useEffect(() => {
     const unsubEmployees = subscribeEmployees((remoteEmployees) => {
@@ -85,12 +93,44 @@ export default function App() {
       }
     });
 
+    const unsubHistory = subscribeHistoryBatches((remoteBatches) => {
+      if (remoteBatches) {
+        setHistoryBatches(remoteBatches);
+      }
+    });
+
     return () => {
       unsubEmployees();
       unsubPayroll();
       unsubSettings();
+      unsubHistory();
     };
   }, []);
+
+  // Save batch handler
+  const handleSaveBatchToHistory = async (batchName: string, recordsToSave: PayrollRecord[]) => {
+    const totalNet = recordsToSave.reduce((sum, r) => sum + r.netSalary, 0);
+    const newBatch: PayrollHistoryBatch = {
+      id: `batch-${Date.now()}`,
+      batchName,
+      monthYear: selectedMonth,
+      clientCompany: recordsToSave[0]?.clientCompany || settings.companySite,
+      createdAt: new Date().toISOString(),
+      totalEmployees: recordsToSave.length,
+      totalNetSalary: totalNet,
+      records: recordsToSave,
+    };
+    setHistoryBatches((prev) => [newBatch, ...prev]);
+    await saveHistoryBatchToFirestore(newBatch);
+  };
+
+  // Load batch handler
+  const handleLoadBatchToActivePayroll = (batch: PayrollHistoryBatch) => {
+    if (confirm(`Load all ${batch.records.length} records from "${batch.batchName}" into the active Payroll tab?`)) {
+      setPayrollRecords(batch.records);
+      setActiveTab('payroll');
+    }
+  };
 
   // Modal for salary slip print preview
   const [selectedPayslipRecord, setSelectedPayslipRecord] = useState<PayrollRecord | null>(null);
@@ -122,6 +162,18 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('apex_payroll_records', JSON.stringify(payrollRecords));
   }, [payrollRecords]);
+
+  useEffect(() => {
+    localStorage.setItem('apex_payroll_history_batches', JSON.stringify(historyBatches));
+  }, [historyBatches]);
+
+  // Ensure currentUser has 'history' tab allowed for admin and payroll users
+  const effectiveCurrentUser = currentUser ? {
+    ...currentUser,
+    allowedTabs: currentUser.allowedTabs.includes('history')
+      ? currentUser.allowedTabs
+      : [...currentUser.allowedTabs, 'history' as ActiveTab]
+  } : null;
 
   // Login handler
   const handleLogin = (user: PortalUser) => {
@@ -163,13 +215,13 @@ export default function App() {
         employeeCount={employees.length}
         selectedMonth={selectedMonth}
         setSelectedMonth={setSelectedMonth}
-        currentUser={currentUser}
+        currentUser={effectiveCurrentUser}
         onLogout={handleLogout}
       />
 
       {/* Main Content Area (Hidden during Print to exclude Portal UI) */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 md:pb-8 print:hidden">
-        {activeTab === 'dashboard' && currentUser.allowedTabs.includes('dashboard') && (
+        {activeTab === 'dashboard' && effectiveCurrentUser?.allowedTabs.includes('dashboard') && (
           <Dashboard
             payrollRecords={payrollRecords}
             employees={employees}
@@ -179,17 +231,28 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'payroll' && currentUser.allowedTabs.includes('payroll') && (
+        {activeTab === 'payroll' && effectiveCurrentUser?.allowedTabs.includes('payroll') && (
           <Payroll
             records={payrollRecords}
             setRecords={setPayrollRecords}
             settings={settings}
             onPrintSlip={(rec) => setSelectedPayslipRecord(rec)}
             onOpenSqlImportModal={() => setIsSqlImportModalOpen(true)}
+            onSaveBatchToHistory={handleSaveBatchToHistory}
           />
         )}
 
-        {activeTab === 'form' && currentUser.allowedTabs.includes('form') && (
+        {activeTab === 'history' && effectiveCurrentUser?.allowedTabs.includes('history') && (
+          <History
+            historyBatches={historyBatches}
+            setHistoryBatches={setHistoryBatches}
+            settings={settings}
+            onPrintSlip={(rec) => setSelectedPayslipRecord(rec)}
+            onLoadBatchToActivePayroll={handleLoadBatchToActivePayroll}
+          />
+        )}
+
+        {activeTab === 'form' && effectiveCurrentUser?.allowedTabs.includes('form') && (
           <Form
             employees={employees}
             setEmployees={setEmployees}
@@ -244,7 +307,7 @@ export default function App() {
       <MobileBottomNav
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        currentUser={currentUser}
+        currentUser={effectiveCurrentUser}
         employeeCount={employees.length}
       />
 

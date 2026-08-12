@@ -9,7 +9,7 @@ import {
   writeBatch 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { EmployeeForm, PayrollRecord, CompanySettings } from '../types';
+import { EmployeeForm, PayrollRecord, CompanySettings, PayrollHistoryBatch } from '../types';
 
 // Initialize Firebase App
 export const app = initializeApp({
@@ -30,6 +30,7 @@ export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestore
 const EMPLOYEES_COL = 'employees';
 const PAYROLL_COL = 'payrollRecords';
 const SETTINGS_COL = 'settings';
+const HISTORY_COL = 'payrollHistoryBatches';
 
 /**
  * Subscribe to real-time Employees stream
@@ -173,6 +174,48 @@ export async function pingFirestore(): Promise<number> {
   const pingRef = doc(db, 'system_health', 'ping');
   await setDoc(pingRef, { lastPing: new Date().toISOString() }, { merge: true });
   return Date.now() - start;
+}
+
+/**
+ * Subscribe to real-time Payroll History Batches stream
+ */
+export function subscribeHistoryBatches(
+  onUpdate: (batches: PayrollHistoryBatch[]) => void,
+  onError?: (err: Error) => void
+) {
+  const colRef = collection(db, HISTORY_COL);
+  return onSnapshot(
+    colRef,
+    (snapshot) => {
+      const items: PayrollHistoryBatch[] = [];
+      snapshot.forEach((docSnap) => {
+        items.push({ ...(docSnap.data() as PayrollHistoryBatch), id: docSnap.id });
+      });
+      // Sort by latest created date
+      items.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      onUpdate(items);
+    },
+    (err) => {
+      console.error('Error in subscribeHistoryBatches:', err);
+      if (onError) onError(err);
+    }
+  );
+}
+
+/**
+ * Save or update single Payroll History Batch
+ */
+export async function saveHistoryBatchToFirestore(batch: PayrollHistoryBatch) {
+  const batchRef = doc(db, HISTORY_COL, batch.id);
+  await setDoc(batchRef, batch, { merge: true });
+}
+
+/**
+ * Delete Payroll History Batch
+ */
+export async function deleteHistoryBatchFromFirestore(batchId: string) {
+  const batchRef = doc(db, HISTORY_COL, batchId);
+  await deleteDoc(batchRef);
 }
 
 /**

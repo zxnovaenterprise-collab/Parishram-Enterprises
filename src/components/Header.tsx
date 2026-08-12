@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Receipt, UserPlus, IdCard, Settings as SettingsIcon, Building2, Calendar, FileSpreadsheet, UserCheck, LogOut } from 'lucide-react';
+import { LayoutDashboard, Receipt, History as HistoryIcon, UserPlus, IdCard, Settings as SettingsIcon, Building2, Calendar, FileSpreadsheet, UserCheck, LogOut } from 'lucide-react';
 import { ActiveTab, CompanySettings, PortalUser } from '../types';
 
 interface HeaderProps {
@@ -26,6 +26,7 @@ export const Header: React.FC<HeaderProps> = ({
   const allNavItems = [
     { id: 'dashboard' as ActiveTab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'payroll' as ActiveTab, label: 'Payroll & Slips', icon: Receipt },
+    { id: 'history' as ActiveTab, label: 'History', icon: HistoryIcon },
     { id: 'form' as ActiveTab, label: 'Employee Form & Docs', icon: UserPlus },
     { id: 'idcard' as ActiveTab, label: 'ID Cards', icon: IdCard },
     { id: 'settings' as ActiveTab, label: 'Settings & Users', icon: SettingsIcon },

@@ -258,7 +258,7 @@ export const defaultPortalUsers: PortalUser[] = [
     password: 'admin123',
     fullName: 'Rajesh Sharma (Admin)',
     role: 'System Administrator',
-    allowedTabs: ['dashboard', 'payroll', 'form', 'idcard', 'settings'],
+    allowedTabs: ['dashboard', 'payroll', 'history', 'form', 'idcard', 'settings'],
   },
   {
     id: 'usr_hr',
@@ -274,7 +274,7 @@ export const defaultPortalUsers: PortalUser[] = [
     password: 'pay123',
     fullName: 'Amit Kumar',
     role: 'Payroll Accountant',
-    allowedTabs: ['dashboard', 'payroll'],
+    allowedTabs: ['dashboard', 'payroll', 'history'],
   },
 ];
 

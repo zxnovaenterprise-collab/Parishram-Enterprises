@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   FileSpreadsheet, Upload, Download, FileCheck, Search, Filter, Plus, 
-  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X, Building, Database
+  Printer, Edit2, Trash2, RefreshCw, ChevronRight, Calculator, CheckCircle2, AlertCircle, X, Building, Database, BookmarkPlus, History as HistoryIcon, Save
 } from 'lucide-react';
 import { PayrollRecord, CompanySettings } from '../types';
 import { formatINR, calculatePayrollRow } from '../lib/calculations';
@@ -15,6 +15,7 @@ interface PayrollProps {
   settings: CompanySettings;
   onPrintSlip: (record: PayrollRecord) => void;
   onOpenSqlImportModal?: () => void;
+  onSaveBatchToHistory?: (batchName: string, recordsToSave: PayrollRecord[]) => void;
 }
 
 export const Payroll: React.FC<PayrollProps> = ({
@@ -23,6 +24,7 @@ export const Payroll: React.FC<PayrollProps> = ({
   settings,
   onPrintSlip,
   onOpenSqlImportModal,
+  onSaveBatchToHistory,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('ALL');
@@ -31,6 +33,11 @@ export const Payroll: React.FC<PayrollProps> = ({
   // Modal states
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<PayrollRecord> | null>(null);
+
+  // History Save Modal State
+  const [isSaveHistoryModalOpen, setIsSaveHistoryModalOpen] = useState(false);
+  const [batchNameInput, setBatchNameInput] = useState('');
+  const [saveOption, setSaveOption] = useState<'filtered' | 'all'>('filtered');
 
   // Import notification state
   const [importStatus, setImportStatus] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
@@ -196,6 +203,23 @@ export const Payroll: React.FC<PayrollProps> = ({
               <Download className="w-4 h-4 text-emerald-400" />
               Export Excel
             </button>
+
+            {/* Save Batch to History */}
+            {onSaveBatchToHistory && (
+              <button
+                onClick={() => {
+                  const companyLabel = selectedCompanyFilter !== 'ALL' ? selectedCompanyFilter : (settings.companySite || 'Payroll');
+                  const dateLabel = new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                  setBatchNameInput(`${companyLabel} Sheet - ${dateLabel}`);
+                  setIsSaveHistoryModalOpen(true);
+                }}
+                id="btn-save-payroll-to-history"
+                className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all shadow-md shadow-purple-600/20"
+              >
+                <BookmarkPlus className="w-4 h-4 text-purple-200" />
+                Save to History
+              </button>
+            )}
 
             {/* Print Master Payroll Sheet */}
             <button
@@ -748,6 +772,124 @@ export const Payroll: React.FC<PayrollProps> = ({
                   className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-lg cursor-pointer shadow"
                 >
                   Save Payroll Entry
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SAVE SNAPSHOT TO HISTORY MODAL */}
+      {isSaveHistoryModalOpen && onSaveBatchToHistory && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-purple-100 text-purple-700 rounded-xl">
+                  <BookmarkPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900">Save Snapshot to History</h3>
+                  <p className="text-[11px] text-slate-500">Archive current payroll sheet with custom batch name</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSaveHistoryModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!batchNameInput.trim()) return;
+                const recordsToSave = saveOption === 'filtered' ? filteredRecords : records;
+                onSaveBatchToHistory(batchNameInput.trim(), recordsToSave);
+                setIsSaveHistoryModalOpen(false);
+                setImportStatus({
+                  message: `Saved snapshot "${batchNameInput}" (${recordsToSave.length} records) to History Tab!`,
+                  type: 'success',
+                });
+                setTimeout(() => setImportStatus(null), 5000);
+              }}
+              className="space-y-4 text-xs"
+            >
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Snapshot Batch Name</label>
+                <input
+                  type="text"
+                  value={batchNameInput}
+                  onChange={(e) => setBatchNameInput(e.target.value)}
+                  placeholder="e.g. July 2026 - Western Refrigeration Site"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-900 focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">Records to Include</label>
+                <div className="space-y-2 pt-1">
+                  <label className="flex items-center gap-2 p-2.5 border rounded-xl cursor-pointer hover:bg-purple-50/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="saveOption"
+                      checked={saveOption === 'filtered'}
+                      onChange={() => setSaveOption('filtered')}
+                      className="text-purple-600 focus:ring-purple-500"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-900 block">Current Filtered View ({filteredRecords.length} Employees)</span>
+                      <span className="text-[10px] text-slate-500">Saves only records matching active company and search filters</span>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-2 p-2.5 border rounded-xl cursor-pointer hover:bg-purple-50/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="saveOption"
+                      checked={saveOption === 'all'}
+                      onChange={() => setSaveOption('all')}
+                      className="text-purple-600 focus:ring-purple-500"
+                    />
+                    <div>
+                      <span className="font-bold text-slate-900 block">All Master Payroll Sheet Records ({records.length} Employees)</span>
+                      <span className="text-[10px] text-slate-500">Saves every single employee in active payroll list</span>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-[11px] text-slate-600 space-y-1 font-mono">
+                <div className="flex justify-between">
+                  <span>Target Records:</span>
+                  <strong className="text-slate-900">
+                    {saveOption === 'filtered' ? filteredRecords.length : records.length} Staff
+                  </strong>
+                </div>
+                <div className="flex justify-between">
+                  <span>Net Salary Total:</span>
+                  <strong className="text-emerald-600">
+                    {formatINR((saveOption === 'filtered' ? filteredRecords : records).reduce((sum, r) => sum + r.netSalary, 0))}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsSaveHistoryModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-xl shadow cursor-pointer flex items-center gap-1.5"
+                >
+                  <Save className="w-4 h-4" />
+                  Save Snapshot to History
                 </button>
               </div>
             </form>

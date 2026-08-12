@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Receipt, UserPlus, IdCard, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutDashboard, Receipt, History as HistoryIcon, UserPlus, IdCard, Settings as SettingsIcon } from 'lucide-react';
 import { ActiveTab, PortalUser } from '../types';
 
 interface MobileBottomNavProps {
@@ -18,6 +18,7 @@ export const MobileBottomNav: React.FC<MobileBottomNavProps> = ({
   const allNavItems = [
     { id: 'dashboard' as ActiveTab, label: 'Dashboard', icon: LayoutDashboard },
     { id: 'payroll' as ActiveTab, label: 'Payroll', icon: Receipt },
+    { id: 'history' as ActiveTab, label: 'History', icon: HistoryIcon },
     { id: 'form' as ActiveTab, label: 'Add Form', icon: UserPlus },
     { id: 'idcard' as ActiveTab, label: 'ID Cards', icon: IdCard },
     { id: 'settings' as ActiveTab, label: 'Settings', icon: SettingsIcon },

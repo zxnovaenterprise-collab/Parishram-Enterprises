@@ -42,6 +42,18 @@
         "companySubTitle": { "type": "string" },
         "companySite": { "type": "string" }
       }
+    },
+    "payrollHistoryBatches": {
+      "title": "Payroll History Batches",
+      "description": "Stores historical payroll snapshot batches",
+      "properties": {
+        "id": { "type": "string" },
+        "batchName": { "type": "string" },
+        "monthYear": { "type": "string" },
+        "totalEmployees": { "type": "number" },
+        "totalNetSalary": { "type": "number" }
+      },
+      "required": ["batchName"]
     }
   }
 }
