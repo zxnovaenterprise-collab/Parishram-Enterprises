@@ -11,8 +11,15 @@
 
 /* PRINT ENGINE STYLES */
 @media print {
-  /* 1. Reset Global Canvas to Paper Page */
-  html, body, #root {
+  /* 1. Reset Global Canvas and Layout Wrappers so they take ZERO space if empty or static */
+  html,
+  body,
+  #root,
+  #root > div,
+  #root > div > div,
+  main,
+  [class*="min-h-screen"],
+  [class*="h-screen"] {
     background: #ffffff !important;
     color: #000000 !important;
     margin: 0 !important;
@@ -20,6 +27,9 @@
     width: 100% !important;
     height: auto !important;
     min-height: 0 !important;
+    max-height: none !important;
+    position: static !important;
+    display: block !important;
     overflow: visible !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
@@ -31,13 +41,16 @@
   footer,
   aside,
   button,
+  input,
+  select,
+  textarea,
   .print\:hidden,
   .no-print,
   [id^="btn-"] {
     display: none !important;
   }
 
-  /* 3. Unwrap fixed modal containers so they print cleanly without clipping */
+  /* 3. Unwrap fixed modal containers so they print cleanly without clipping or extra pages */
   [role="dialog"],
   .fixed,
   .fixed.inset-0,
@@ -50,6 +63,7 @@
     width: 100% !important;
     max-width: 100% !important;
     height: auto !important;
+    min-height: 0 !important;
     max-height: none !important;
     overflow: visible !important;
     background: #ffffff !important;
@@ -57,6 +71,13 @@
     margin: 0 !important;
     border: none !important;
     box-shadow: none !important;
+  }
+
+  .modal-scroll-area {
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #ffffff !important;
   }
 
   /* 4. Target ONLY printable document containers */
@@ -94,8 +115,9 @@
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding-top: 2mm !important;
-    padding-bottom: 2mm !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
   }
 
   .print-page-2 {
@@ -106,13 +128,14 @@
     display: block !important;
     width: 100% !important;
     box-sizing: border-box !important;
-    padding-top: 2mm !important;
-    padding-bottom: 2mm !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    margin: 0 !important;
   }
 
-  /* 6. Standard A4 Paper Settings with requested header, left, right, and bottom spacing */
+  /* 6. Standard A4 Paper Settings with clean margins */
   @page {
     size: A4 portrait;
-    margin: 12mm 15mm 12mm 15mm;
+    margin: 10mm 12mm 10mm 12mm;
   }
 }

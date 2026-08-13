@@ -217,7 +217,7 @@ export const History: React.FC<HistoryProps> = ({
   const totalHistoricalPayout = historyBatches.reduce((acc, b) => acc + b.totalNetSalary, 0);
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-12">
+    <div className="space-y-6 animate-fadeIn pb-12 print:hidden">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-16 right-4 z-50 bg-emerald-600 text-white font-bold text-xs px-4 py-3 rounded-2xl shadow-xl flex items-center gap-2 animate-bounce">

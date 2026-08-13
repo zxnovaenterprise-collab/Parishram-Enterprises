@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveTab, CompanySettings, EmployeeForm, PayrollRecord, PortalUser, PayrollHistoryBatch } from './types';
-import { initialCompanySettings, defaultPortalUsers } from './data/initialData';
+import { initialCompanySettings, defaultPortalUsers, sampleEmployees, samplePayrollRecords } from './data/initialData';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Payroll } from './components/Payroll';
@@ -51,13 +51,31 @@ export default function App() {
   });
 
   const [employees, setEmployees] = useState<EmployeeForm[]>(() => {
+    const initialized = localStorage.getItem('apex_initialized_v2');
     const saved = localStorage.getItem('apex_employees_data');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    if (!initialized) {
+      localStorage.setItem('apex_initialized_v2', 'true');
+      saveBatchEmployeesToFirestore(sampleEmployees).catch(console.error);
+      return sampleEmployees;
+    }
+    return [];
   });
 
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(() => {
+    const initialized = localStorage.getItem('apex_initialized_v2');
     const saved = localStorage.getItem('apex_payroll_records');
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      return JSON.parse(saved);
+    }
+    if (!initialized) {
+      localStorage.setItem('apex_initialized_v2', 'true');
+      saveBatchPayrollRecordsToFirestore(samplePayrollRecords).catch(console.error);
+      return samplePayrollRecords;
+    }
+    return [];
   });
 
   const [historyBatches, setHistoryBatches] = useState<PayrollHistoryBatch[]>(() => {
@@ -68,11 +86,29 @@ export default function App() {
   // Real-time Firestore Subscriptions
   useEffect(() => {
     const unsubEmployees = subscribeEmployees((remoteEmployees) => {
-      setEmployees(remoteEmployees || []);
+      const initialized = localStorage.getItem('apex_initialized_v2');
+      if (remoteEmployees && remoteEmployees.length > 0) {
+        setEmployees(remoteEmployees);
+      } else if (!initialized) {
+        localStorage.setItem('apex_initialized_v2', 'true');
+        saveBatchEmployeesToFirestore(sampleEmployees).catch(console.error);
+        setEmployees(sampleEmployees);
+      } else {
+        setEmployees([]);
+      }
     });
 
     const unsubPayroll = subscribePayrollRecords((remotePayroll) => {
-      setPayrollRecords(remotePayroll || []);
+      const initialized = localStorage.getItem('apex_initialized_v2');
+      if (remotePayroll && remotePayroll.length > 0) {
+        setPayrollRecords(remotePayroll);
+      } else if (!initialized) {
+        localStorage.setItem('apex_initialized_v2', 'true');
+        saveBatchPayrollRecordsToFirestore(samplePayrollRecords).catch(console.error);
+        setPayrollRecords(samplePayrollRecords);
+      } else {
+        setPayrollRecords([]);
+      }
     });
 
     const unsubSettings = subscribeSettings((remoteSettings) => {
@@ -211,8 +247,8 @@ export default function App() {
       />
 
       {/* Main Right Content Panel */}
-      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 lg:pb-8 print:hidden">
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen print:min-h-0 print:h-auto">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 lg:pb-8 print:p-0 print:m-0">
         {activeTab === 'dashboard' && effectiveCurrentUser?.allowedTabs.includes('dashboard') && (
           <Dashboard
             payrollRecords={payrollRecords}

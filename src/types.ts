@@ -37,6 +37,7 @@ export interface PayrollRecord {
   monthYear: string;           // e.g. "2026-08"
   department: string;          // Department
   designation: string;         // Designation
+  isSample?: boolean;          // Flag for sample data row
 }
 
 export type DocumentType = 'Aadhaar Card' | 'PAN Card' | 'Profile Photo';

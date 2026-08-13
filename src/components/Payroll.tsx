@@ -184,10 +184,14 @@ export const Payroll: React.FC<PayrollProps> = ({
         return;
       }
 
-      setRecords(importedRows);
-      saveBatchPayrollRecordsToFirestore(importedRows).catch(console.error);
+      // Filter out sample record on import
+      const cleanImport = importedRows.filter((r) => !r.isSample && r.cardNo !== 'SAMPLE' && !r.id.includes('sample'));
+      setRecords(cleanImport);
+      saveBatchPayrollRecordsToFirestore(cleanImport).catch(console.error);
+      deletePayrollRecordFromFirestore('sample-payroll-001').catch(console.error);
+
       setImportStatus({
-        message: `Successfully imported ${importedRows.length} employee payroll rows!`,
+        message: `Successfully imported ${cleanImport.length} employee payroll rows!`,
         type: 'success',
       });
 
@@ -221,8 +225,12 @@ export const Payroll: React.FC<PayrollProps> = ({
       // Edit
       setRecords((prev) => prev.map((r) => (r.id === editingRecord.id ? computedRow : r)));
     } else {
-      // Add
-      setRecords((prev) => [...prev, computedRow]);
+      // Add: Remove sample record automatically when adding real data
+      setRecords((prev) => {
+        const nonSample = prev.filter((r) => !r.isSample && r.cardNo !== 'SAMPLE' && !r.id.includes('sample'));
+        return [computedRow, ...nonSample];
+      });
+      deletePayrollRecordFromFirestore('sample-payroll-001').catch(console.error);
     }
 
     savePayrollRecordToFirestore(computedRow).catch(console.error);
@@ -240,10 +248,19 @@ export const Payroll: React.FC<PayrollProps> = ({
   const totalNetSalary = filteredRecords.reduce((acc, r) => acc + r.netSalary, 0);
   const totalAmt = filteredRecords.reduce((acc, r) => acc + r.amt, 0);
 
+  // Sort display records so any sample row is always at the top!
+  const sortedDisplayRecords = [...filteredRecords].sort((a, b) => {
+    const isSampleA = Boolean(a.isSample || a.cardNo === 'SAMPLE' || a.id.includes('sample'));
+    const isSampleB = Boolean(b.isSample || b.cardNo === 'SAMPLE' || b.id.includes('sample'));
+    if (isSampleA && !isSampleB) return -1;
+    if (!isSampleA && isSampleB) return 1;
+    return 0;
+  });
+
   return (
     <div className="space-y-6">
       {/* Action Header & Import/Export Bar */}
-      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm space-y-4 print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <h2 className="text-xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
@@ -496,13 +513,13 @@ export const Payroll: React.FC<PayrollProps> = ({
       )}
 
       {/* Complete 33-Column Data Table for Desktop & Tablet */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hidden sm:block" id="printable-payroll-sheet">
-        <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hidden sm:block print:block print:rounded-none print:border-none print:shadow-none print:m-0 print:p-0" id="printable-payroll-sheet">
+        <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin print:max-h-none print:overflow-visible print:m-0 print:p-0">
           <table className="w-full text-left border-collapse text-[11px] font-sans">
             <thead className="bg-slate-900 text-slate-200 sticky top-0 z-20 uppercase font-semibold tracking-wider text-[10px]">
               <tr>
                 {/* Select Checkbox Column Header */}
-                <th className="p-3 sticky left-0 bg-slate-900 z-30 border-b border-r border-slate-800 text-center w-10">
+                <th className="p-3 sticky left-0 bg-slate-900 z-30 border-b border-r border-slate-800 text-center w-10 print:hidden">
                   <input
                     type="checkbox"
                     checked={isAllSelected}
@@ -512,7 +529,7 @@ export const Payroll: React.FC<PayrollProps> = ({
                   />
                 </th>
                 {/* Actions Column */}
-                <th className="p-3 border-b border-r border-slate-800 text-center min-w-[90px]">
+                <th className="p-3 border-b border-r border-slate-800 text-center min-w-[90px] print:hidden">
                   ACTION
                 </th>
                 <th className="p-3 border-b border-r border-slate-800 min-w-[50px] text-center">S.N.</th>
@@ -557,11 +574,26 @@ export const Payroll: React.FC<PayrollProps> = ({
             </thead>
 
             <tbody className="divide-y divide-slate-200">
-              {filteredRecords.length > 0 ? (
-                filteredRecords.map((r, idx) => (
-                  <tr key={r.id} className="hover:bg-blue-50/50 transition-colors group">
+              {sortedDisplayRecords.length > 0 ? (
+                sortedDisplayRecords.map((r, idx) => {
+                  const isSampleRow = Boolean(r.isSample || r.cardNo === 'SAMPLE' || r.id.includes('sample'));
+                  return (
+                  <tr
+                    key={r.id}
+                    className={
+                      isSampleRow
+                        ? 'bg-emerald-500 text-white font-extrabold hover:bg-emerald-600 transition-colors group shadow-md border-b-2 border-emerald-600'
+                        : 'hover:bg-blue-50/50 transition-colors group'
+                    }
+                  >
                     {/* Checkbox Cell */}
-                    <td className="p-2 sticky left-0 bg-white group-hover:bg-blue-50/90 z-10 border-r border-slate-200 text-center w-10">
+                    <td
+                      className={
+                        isSampleRow
+                          ? 'p-2 sticky left-0 bg-emerald-500 group-hover:bg-emerald-600 z-10 border-r border-emerald-400 text-center w-10 text-white print:hidden'
+                          : 'p-2 sticky left-0 bg-white group-hover:bg-blue-50/90 z-10 border-r border-slate-200 text-center w-10 print:hidden'
+                      }
+                    >
                       <input
                         type="checkbox"
                         checked={selectedRecordIds.includes(r.id)}
@@ -570,13 +602,23 @@ export const Payroll: React.FC<PayrollProps> = ({
                       />
                     </td>
                     {/* Sticky Action Cell */}
-                    <td className="p-2 border-r border-slate-200 text-center">
+                    <td
+                      className={
+                        isSampleRow
+                          ? 'p-2 border-r border-emerald-400 text-center bg-emerald-500 group-hover:bg-emerald-600 print:hidden'
+                          : 'p-2 border-r border-slate-200 text-center print:hidden'
+                      }
+                    >
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => onPrintSlip(r)}
                           title="Print Salary Slip"
                           id={`btn-print-slip-${r.cardNo}`}
-                          className="p-1 bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white rounded cursor-pointer transition-colors"
+                          className={
+                            isSampleRow
+                              ? 'p-1 bg-emerald-700 hover:bg-emerald-900 text-white rounded cursor-pointer transition-colors border border-emerald-300'
+                              : 'p-1 bg-blue-100 hover:bg-blue-600 text-blue-700 hover:text-white rounded cursor-pointer transition-colors'
+                          }
                         >
                           <Printer className="w-3.5 h-3.5" />
                         </button>
@@ -586,69 +628,78 @@ export const Payroll: React.FC<PayrollProps> = ({
                             setIsAddEditModalOpen(true);
                           }}
                           title="Edit Row"
-                          className="p-1 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded cursor-pointer transition-colors"
+                          className={
+                            isSampleRow
+                              ? 'p-1 bg-emerald-700 hover:bg-emerald-900 text-white rounded cursor-pointer transition-colors border border-emerald-300'
+                              : 'p-1 bg-slate-100 hover:bg-slate-700 text-slate-700 hover:text-white rounded cursor-pointer transition-colors'
+                          }
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => handleDeleteRow(r.id)}
-                          title="Delete Row"
-                          className="p-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded cursor-pointer transition-colors"
+                          title="Delete Row (Sample Row)"
+                          className={
+                            isSampleRow
+                              ? 'p-1 bg-rose-600 hover:bg-rose-700 text-white rounded cursor-pointer transition-colors font-bold shadow-sm'
+                              : 'p-1 bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white rounded cursor-pointer transition-colors'
+                          }
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     </td>
 
-                    <td className="p-2 border-r border-slate-200 text-center font-mono text-slate-500">{r.sn || idx + 1}</td>
-                    <td className="p-2 border-r border-slate-200 font-bold text-blue-700 font-mono">{r.cardNo}</td>
-                    <td className="p-2 border-r border-slate-200 font-bold text-slate-800 uppercase text-[10px] leading-tight">
+                    <td className={`p-2 border-r text-center font-mono ${isSampleRow ? 'border-emerald-400 text-white font-extrabold' : 'border-slate-200 text-slate-500'}`}>{r.sn || idx + 1}</td>
+                    <td className={`p-2 border-r font-mono ${isSampleRow ? 'border-emerald-400 text-white font-black underline decoration-2' : 'border-slate-200 font-bold text-blue-700'}`}>{r.cardNo}</td>
+                    <td className={`p-2 border-r uppercase text-[10px] leading-tight ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 font-bold text-slate-800'}`}>
                       <div className="flex items-center gap-1 max-w-[180px]">
-                        <Building className="w-3 h-3 text-blue-600 shrink-0" />
+                        <Building className={`w-3 h-3 shrink-0 ${isSampleRow ? 'text-white' : 'text-blue-600'}`} />
                         <span className="truncate">{r.clientCompany || settings.companySite || 'WESTERN REFRIGERATION PVT LTD'}</span>
                       </div>
                     </td>
-                    <td className="p-2 border-r border-slate-200 font-mono text-slate-600">{r.uan || '-'}</td>
-                    <td className="p-2 border-r border-slate-200 font-mono text-slate-600">{r.esicNo || '-'}</td>
-                    <td className="p-2 border-r border-slate-200 font-bold text-slate-900 whitespace-nowrap">{r.name}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-medium">{r.days}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-500">{r.hrs}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono">{r.ph}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-700">₹{r.rate}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono font-bold text-emerald-800">
+                    <td className={`p-2 border-r font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>{r.uan || '-'}</td>
+                    <td className={`p-2 border-r font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>{r.esicNo || '-'}</td>
+                    <td className={`p-2 border-r whitespace-nowrap ${isSampleRow ? 'border-emerald-400 text-white font-black tracking-wide' : 'border-slate-200 font-bold text-slate-900'}`}>{r.name}</td>
+                    <td className={`p-2 border-r text-right ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 font-medium'}`}>{r.days}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-500'}`}>{r.hrs}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200'}`}>{r.ph}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-700'}`}>₹{r.rate}</td>
+                    <td className={`p-2 border-r text-right font-mono font-bold ${isSampleRow ? 'border-emerald-400 text-white' : 'border-slate-200 text-emerald-800'}`}>
                       {formatINR(r.salary)}
                     </td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-700">₹{r.pf}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-700">₹{r.esic}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.gwlf}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.pt}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-rose-700">₹{r.advance}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.trn}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.rr}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.food}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono font-bold text-rose-700 bg-rose-50/30">
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-700'}`}>₹{r.pf}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-700'}`}>₹{r.esic}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.gwlf}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.pt}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-rose-700'}`}>₹{r.advance}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.trn}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.rr}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.food}</td>
+                    <td className={`p-2 border-r text-right font-mono font-bold ${isSampleRow ? 'border-emerald-400 text-white bg-emerald-600/60' : 'border-slate-200 text-rose-700 bg-rose-50/30'}`}>
                       {formatINR(r.totalDeduction)}
                     </td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono font-black text-emerald-900 bg-emerald-50/50">
+                    <td className={`p-2 border-r text-right font-mono font-black ${isSampleRow ? 'border-emerald-400 text-white bg-emerald-700/80' : 'border-slate-200 text-emerald-900 bg-emerald-50/50'}`}>
                       {formatINR(r.netSalary)}
                     </td>
-                    <td className="p-2 border-r border-slate-200 font-mono text-slate-700">{r.accountNumber || '-'}</td>
-                    <td className="p-2 border-r border-slate-200 font-mono text-slate-700">{r.ifscCode || '-'}</td>
-                    <td className="p-2 border-r border-slate-200 font-semibold text-slate-700">{r.agt}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono">{r.otDays}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.otRate}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.wages}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.employerPf}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.trnAllowance}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.bonus}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.hra}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.leaveEncashment}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono text-slate-600">₹{r.otPay}</td>
-                    <td className="p-2 border-r border-slate-200 text-right font-mono font-black text-blue-900 bg-blue-50/50">
+                    <td className={`p-2 border-r font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-700'}`}>{r.accountNumber || '-'}</td>
+                    <td className={`p-2 border-r font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-700'}`}>{r.ifscCode || '-'}</td>
+                    <td className={`p-2 border-r font-semibold ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-700'}`}>{r.agt}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200'}`}>{r.otDays}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.otRate}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.wages}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.employerPf}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.trnAllowance}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.bonus}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.hra}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.leaveEncashment}</td>
+                    <td className={`p-2 border-r text-right font-mono ${isSampleRow ? 'border-emerald-400 text-white font-bold' : 'border-slate-200 text-slate-600'}`}>₹{r.otPay}</td>
+                    <td className={`p-2 border-r text-right font-mono font-black ${isSampleRow ? 'border-emerald-400 text-white bg-emerald-700/80' : 'border-slate-200 text-blue-900 bg-blue-50/50'}`}>
                       {formatINR(r.amt)}
                     </td>
                   </tr>
-                ))
+                );
+              })
               ) : (
                 <tr>
                   <td colSpan={35} className="p-12 text-center text-slate-400 text-xs">
@@ -694,64 +745,70 @@ export const Payroll: React.FC<PayrollProps> = ({
       </div>
 
       {/* Responsive App-like Card List for Mobile Views */}
-      <div className="block sm:hidden space-y-3">
+      <div className="block sm:hidden space-y-3 print:hidden">
         <div className="flex items-center justify-between text-xs font-semibold text-slate-500 px-1">
           <span>Showing {filteredRecords.length} Employee Records</span>
           <span className="text-emerald-700 font-bold">Total Net: {formatINR(totalNetSalary)}</span>
         </div>
 
-        {filteredRecords.length > 0 ? (
-          filteredRecords.map((r, idx) => (
+        {sortedDisplayRecords.length > 0 ? (
+          sortedDisplayRecords.map((r) => {
+            const isSampleCard = Boolean(r.isSample || r.cardNo === 'SAMPLE' || r.id.includes('sample'));
+            return (
             <div
               key={r.id}
-              className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm space-y-3 relative overflow-hidden"
+              className={
+                isSampleCard
+                  ? 'bg-emerald-500 text-white rounded-2xl border-2 border-emerald-600 p-4 shadow-lg space-y-3 relative overflow-hidden font-bold'
+                  : 'bg-white rounded-2xl border border-slate-200/90 p-4 shadow-sm space-y-3 relative overflow-hidden'
+              }
             >
               {/* Card Header */}
-              <div className="flex items-start justify-between gap-2 border-b border-slate-100 pb-2.5">
+              <div className={`flex items-start justify-between gap-2 border-b pb-2.5 ${isSampleCard ? 'border-emerald-400' : 'border-slate-100'}`}>
                 <div>
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px] font-extrabold uppercase border border-blue-200 flex items-center gap-1">
-                      <Building className="w-3 h-3 text-blue-600" />
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold uppercase border flex items-center gap-1 ${isSampleCard ? 'bg-emerald-700 text-white border-emerald-300' : 'bg-blue-100 text-blue-800 border-blue-200'}`}>
+                      <Building className="w-3 h-3 shrink-0" />
                       {r.clientCompany || settings.companySite || 'WESTERN REFRIGERATION PVT LTD'}
                     </span>
-                    <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-mono font-bold">
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${isSampleCard ? 'bg-emerald-700 text-white' : 'bg-slate-100 text-slate-600'}`}>
                       #{r.cardNo}
                     </span>
                   </div>
-                  <h3 className="font-bold text-slate-900 text-sm mt-1.5 flex items-center gap-1.5">
+                  <h3 className={`font-bold text-sm mt-1.5 flex items-center gap-1.5 ${isSampleCard ? 'text-white' : 'text-slate-900'}`}>
                     {r.name}
                   </h3>
                 </div>
 
                 <div className="text-right shrink-0">
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Net Payout</span>
-                  <span className="text-sm font-black text-emerald-600 font-mono">
+                  <span className={`text-[10px] block font-semibold uppercase ${isSampleCard ? 'text-emerald-100' : 'text-slate-400'}`}>Net Payout</span>
+                  <span className={`text-sm font-black font-mono ${isSampleCard ? 'text-white' : 'text-emerald-600'}`}>
                     {formatINR(r.netSalary)}
                   </span>
                 </div>
               </div>
 
               {/* Data Badges Grid */}
-              <div className="grid grid-cols-2 gap-2 text-[11px] bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div className={`grid grid-cols-2 gap-2 text-[11px] p-2.5 rounded-xl border ${isSampleCard ? 'bg-emerald-600 border-emerald-400 text-white' : 'bg-slate-50 border-slate-100'}`}>
                 <div>
-                  <span className="text-slate-400 text-[10px] block">Days Worked / Rate</span>
-                  <strong className="text-slate-800 font-mono">{r.days} Days @ ₹{r.rate}/day</strong>
+                  <span className={`text-[10px] block ${isSampleCard ? 'text-emerald-100' : 'text-slate-400'}`}>Days Worked / Rate</span>
+                  <strong className={`font-mono ${isSampleCard ? 'text-white' : 'text-slate-800'}`}>{r.days} Days @ ₹{r.rate}/day</strong>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] block">Gross Salary</span>
-                  <strong className="text-emerald-700 font-mono">{formatINR(r.salary)}</strong>
+                  <span className={`text-[10px] block ${isSampleCard ? 'text-emerald-100' : 'text-slate-400'}`}>Gross Salary</span>
+                  <strong className={`font-mono ${isSampleCard ? 'text-white' : 'text-emerald-700'}`}>{formatINR(r.salary)}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] block">PF / ESIC Deductions</span>
-                  <strong className="text-amber-700 font-mono">PF: ₹{r.pf} | ESIC: ₹{r.esic}</strong>
+                  <span className={`text-[10px] block ${isSampleCard ? 'text-emerald-100' : 'text-slate-400'}`}>PF / ESIC Deductions</span>
+                  <strong className={`font-mono ${isSampleCard ? 'text-white' : 'text-amber-700'}`}>PF: ₹{r.pf} | ESIC: ₹{r.esic}</strong>
                 </div>
                 <div>
-                  <span className="text-slate-400 text-[10px] block">Total Deductions</span>
-                  <strong className="text-rose-700 font-mono">{formatINR(r.totalDeduction)}</strong>
+                  <span className={`text-[10px] block ${isSampleCard ? 'text-emerald-100' : 'text-slate-400'}`}>Total Deductions</span>
+                  <strong className={`font-mono ${isSampleCard ? 'text-white' : 'text-rose-700'}`}>{formatINR(r.totalDeduction)}</strong>
                 </div>
-                <div className="col-span-2 pt-1 border-t border-slate-200/60 flex items-center justify-between text-[10px] text-slate-600">
-                  <span>A/C: <strong className="font-mono text-slate-800">{r.accountNumber || 'N/A'}</strong></span>
-                  <span>IFSC: <strong className="font-mono text-slate-800">{r.ifscCode || 'N/A'}</strong></span>
+                <div className={`col-span-2 pt-1 border-t flex items-center justify-between text-[10px] ${isSampleCard ? 'border-emerald-400 text-emerald-100' : 'border-slate-200/60 text-slate-600'}`}>
+                  <span>A/C: <strong className={`font-mono ${isSampleCard ? 'text-white' : 'text-slate-800'}`}>{r.accountNumber || 'N/A'}</strong></span>
+                  <span>IFSC: <strong className={`font-mono ${isSampleCard ? 'text-white' : 'text-slate-800'}`}>{r.ifscCode || 'N/A'}</strong></span>
                 </div>
               </div>
 
@@ -783,7 +840,8 @@ export const Payroll: React.FC<PayrollProps> = ({
                 </button>
               </div>
             </div>
-          ))
+          );
+        })
         ) : (
           <div className="bg-white rounded-2xl p-8 text-center text-slate-400 text-xs border border-slate-200">
             No payroll records found for this filter.

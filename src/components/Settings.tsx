@@ -243,7 +243,7 @@ export const Settings: React.FC<SettingsProps> = ({
   ];
 
   return (
-    <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto">
+    <div className="space-y-8 animate-fadeIn max-w-5xl mx-auto print:hidden">
       {/* Header */}
       <div className="bg-white rounded-2xl p-6 border border-slate-200/80 shadow-sm flex items-center justify-between">
         <div>
