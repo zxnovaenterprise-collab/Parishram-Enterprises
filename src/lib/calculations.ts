@@ -76,6 +76,7 @@ export function calculatePayrollRow(input: Partial<PayrollRecord>): PayrollRecor
     monthYear: input.monthYear || '2026-08',
     department: input.department || 'Production',
     designation: input.designation || 'Operator',
+    clientCompany: input.clientCompany || 'PARISHRAM ENTERPRISES',
   };
 }
 

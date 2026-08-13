@@ -5,6 +5,7 @@ import { calculatePayrollRow } from './calculations';
 export const EXACT_PAYROLL_HEADERS = [
   'S.N.',
   'CARD NO',
+  'CLIENT COMPANY',
   'UAN',
   'ESIC',
   'NAME',
@@ -42,6 +43,7 @@ export function exportPayrollToExcel(records: PayrollRecord[], fileName = 'Payro
   const dataRows = records.map((r, idx) => [
     idx + 1,
     r.cardNo,
+    r.clientCompany || 'PARISHRAM ENTERPRISES',
     r.uan,
     r.esicNo,
     r.name,
@@ -91,6 +93,7 @@ export function downloadSampleExcel() {
     [
       1,
       'EMP-101',
+      'WESTERN REFRIGERATION CO. LTD.',
       '100987654321',
       '3100456789001',
       'Rajesh Kumar Verma',
@@ -126,6 +129,7 @@ export function downloadSampleExcel() {
     [
       2,
       'EMP-102',
+      'WESTERN REFRIGERATION CO. LTD.',
       '100987654322',
       '3100456789002',
       'Priya Sharma',
@@ -210,6 +214,7 @@ export function parseExcelOrCsvFile(file: File): Promise<PayrollRecord[]> {
           };
 
           const cardNo = String(getValue('CARD NO', ['CARDNO', 'EMP ID', 'EMPLOYEE ID']) || `EMP-${100 + i}`);
+          const clientCompany = String(getValue('CLIENT COMPANY', ['COMPANY', 'COMPANY NAME', 'CLIENT COMPANY / SITE', 'SITE', 'SITE LOCATION', 'CONTRACTOR SITE']) || 'PARISHRAM ENTERPRISES');
           const name = String(getValue('NAME', ['EMPLOYEE NAME', 'FULL NAME']) || `Employee ${i}`);
           const uan = String(getValue('UAN', ['UAN NUMBER', 'UAN NO']) || '');
           const esicNo = String(getValue('ESIC', ['ESIC NO', 'ESIC NUMBER']) || '');
@@ -233,6 +238,7 @@ export function parseExcelOrCsvFile(file: File): Promise<PayrollRecord[]> {
           const record = calculatePayrollRow({
             sn: i,
             cardNo,
+            clientCompany,
             uan,
             esicNo,
             name,

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ActiveTab, CompanySettings, EmployeeForm, PayrollRecord, PortalUser, PayrollHistoryBatch } from './types';
-import { initialCompanySettings, sampleEmployees, samplePayrollRecords, defaultPortalUsers } from './data/initialData';
+import { initialCompanySettings, defaultPortalUsers } from './data/initialData';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Payroll } from './components/Payroll';
@@ -52,12 +52,12 @@ export default function App() {
 
   const [employees, setEmployees] = useState<EmployeeForm[]>(() => {
     const saved = localStorage.getItem('apex_employees_data');
-    return saved ? JSON.parse(saved) : sampleEmployees;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [payrollRecords, setPayrollRecords] = useState<PayrollRecord[]>(() => {
     const saved = localStorage.getItem('apex_payroll_records');
-    return saved ? JSON.parse(saved) : samplePayrollRecords;
+    return saved ? JSON.parse(saved) : [];
   });
 
   const [historyBatches, setHistoryBatches] = useState<PayrollHistoryBatch[]>(() => {
@@ -68,21 +68,11 @@ export default function App() {
   // Real-time Firestore Subscriptions
   useEffect(() => {
     const unsubEmployees = subscribeEmployees((remoteEmployees) => {
-      if (remoteEmployees && remoteEmployees.length > 0) {
-        setEmployees(remoteEmployees);
-      } else if (sampleEmployees.length > 0) {
-        // Seed initial data to Firestore if cloud database is empty
-        saveBatchEmployeesToFirestore(sampleEmployees).catch(console.error);
-      }
+      setEmployees(remoteEmployees || []);
     });
 
     const unsubPayroll = subscribePayrollRecords((remotePayroll) => {
-      if (remotePayroll && remotePayroll.length > 0) {
-        setPayrollRecords(remotePayroll);
-      } else if (samplePayrollRecords.length > 0) {
-        // Seed initial payroll data
-        saveBatchPayrollRecordsToFirestore(samplePayrollRecords).catch(console.error);
-      }
+      setPayrollRecords(remotePayroll || []);
     });
 
     const unsubSettings = subscribeSettings((remoteSettings) => {
@@ -189,12 +179,13 @@ export default function App() {
     setCurrentUser(null);
   };
 
-  // Reset to initial sample dataset
+  // Clear / Reset Data handler
   const handleResetData = () => {
-    if (confirm('Are you sure you want to reset all data back to original sample records?')) {
+    if (confirm('Are you sure you want to clear all data? This will remove active employees and payroll records.')) {
       setSettings(initialCompanySettings);
-      setEmployees(sampleEmployees);
-      setPayrollRecords(samplePayrollRecords);
+      setEmployees([]);
+      setPayrollRecords([]);
+      setHistoryBatches([]);
       setUsers(defaultPortalUsers);
       localStorage.clear();
     }
