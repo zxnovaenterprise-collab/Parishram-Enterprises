@@ -103,11 +103,33 @@ export function subscribeSettings(
 }
 
 /**
+ * Recursively strip undefined values so Firestore setDoc does not throw errors
+ */
+function cleanForFirestore<T>(obj: T): T {
+  if (obj === null || obj === undefined) {
+    return null as any;
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(cleanForFirestore) as any;
+  }
+  if (typeof obj === 'object') {
+    const cleaned: any = {};
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== undefined) {
+        cleaned[key] = cleanForFirestore(value);
+      }
+    }
+    return cleaned;
+  }
+  return obj;
+}
+
+/**
  * Save or update single Employee
  */
 export async function saveEmployeeToFirestore(emp: EmployeeForm) {
   const empRef = doc(db, EMPLOYEES_COL, emp.id);
-  await setDoc(empRef, emp, { merge: true });
+  await setDoc(empRef, cleanForFirestore(emp), { merge: true });
 }
 
 /**
@@ -117,7 +139,7 @@ export async function saveBatchEmployeesToFirestore(employees: EmployeeForm[]) {
   const batch = writeBatch(db);
   employees.forEach((emp) => {
     const ref = doc(db, EMPLOYEES_COL, emp.id);
-    batch.set(ref, emp, { merge: true });
+    batch.set(ref, cleanForFirestore(emp), { merge: true });
   });
   await batch.commit();
 }
@@ -135,7 +157,7 @@ export async function deleteEmployeeFromFirestore(empId: string) {
  */
 export async function savePayrollRecordToFirestore(rec: PayrollRecord) {
   const recRef = doc(db, PAYROLL_COL, rec.id);
-  await setDoc(recRef, rec, { merge: true });
+  await setDoc(recRef, cleanForFirestore(rec), { merge: true });
 }
 
 /**
@@ -145,7 +167,7 @@ export async function saveBatchPayrollRecordsToFirestore(records: PayrollRecord[
   const batch = writeBatch(db);
   records.forEach((rec) => {
     const ref = doc(db, PAYROLL_COL, rec.id);
-    batch.set(ref, rec, { merge: true });
+    batch.set(ref, cleanForFirestore(rec), { merge: true });
   });
   await batch.commit();
 }
@@ -163,7 +185,7 @@ export async function deletePayrollRecordFromFirestore(recId: string) {
  */
 export async function saveSettingsToFirestore(settings: CompanySettings) {
   const docRef = doc(db, SETTINGS_COL, 'company_config');
-  await setDoc(docRef, settings, { merge: true });
+  await setDoc(docRef, cleanForFirestore(settings), { merge: true });
 }
 
 /**
@@ -207,7 +229,7 @@ export function subscribeHistoryBatches(
  */
 export async function saveHistoryBatchToFirestore(batch: PayrollHistoryBatch) {
   const batchRef = doc(db, HISTORY_COL, batch.id);
-  await setDoc(batchRef, batch, { merge: true });
+  await setDoc(batchRef, cleanForFirestore(batch), { merge: true });
 }
 
 /**

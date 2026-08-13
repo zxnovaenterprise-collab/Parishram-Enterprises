@@ -114,7 +114,7 @@ export default function App() {
       id: `batch-${Date.now()}`,
       batchName,
       monthYear: selectedMonth,
-      clientCompany: recordsToSave[0]?.clientCompany || settings.companySite,
+      clientCompany: recordsToSave[0]?.clientCompany || settings.companySite || '',
       createdAt: new Date().toISOString(),
       totalEmployees: recordsToSave.length,
       totalNetSalary: totalNet,
