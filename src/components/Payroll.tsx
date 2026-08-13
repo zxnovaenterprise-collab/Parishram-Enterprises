@@ -513,7 +513,7 @@ export const Payroll: React.FC<PayrollProps> = ({
       )}
 
       {/* Complete 33-Column Data Table for Desktop & Tablet */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hidden sm:block print:block print:rounded-none print:border-none print:shadow-none print:m-0 print:p-0" id="printable-payroll-sheet">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hidden sm:block print:rounded-none print:border-none print:shadow-none print:m-0 print:p-0" id="printable-payroll-sheet">
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin print:max-h-none print:overflow-visible print:m-0 print:p-0">
           <table className="w-full text-left border-collapse text-[11px] font-sans">
             <thead className="bg-slate-900 text-slate-200 sticky top-0 z-20 uppercase font-semibold tracking-wider text-[10px]">

@@ -80,21 +80,63 @@
     background: #ffffff !important;
   }
 
-  /* 4. Target ONLY printable document containers */
+  /* 4. DEFAULT: Hide ALL printable document targets by default */
   #printable-employee-doc,
+  #printable-payroll-sheet,
   #printable-payslip,
-  #printable-id-card,
-  #printable-payroll-sheet {
+  #printable-id-card {
+    display: none !important;
+  }
+
+  /* 5. SPECIFIC VISIBILITY RULES: Display ONLY the target document for current active context */
+
+  /* Case A: When Salary Slip Modal is open, ONLY show #printable-payslip on Page 1 */
+  body:has(#printable-payslip) #printable-payslip {
     display: block !important;
     visibility: visible !important;
-    position: static !important;
+    position: relative !important;
     width: 100% !important;
-    margin: 0 !important;
+    margin: 0 auto !important;
     padding: 0 !important;
-    background: #ffffff !important;
-    box-shadow: none !important;
-    border: none !important;
-    overflow: visible !important;
+    box-sizing: border-box !important;
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  body:has(#printable-payslip) #printable-payroll-sheet,
+  body:has(#printable-payslip) #printable-employee-doc,
+  body:has(#printable-payslip) #printable-id-card {
+    display: none !important;
+  }
+
+  /* Case B: When Employee Form Preview Modal is open, ONLY show #printable-employee-doc */
+  body:has(#printable-employee-doc) #printable-employee-doc {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+  }
+
+  body:has(#printable-employee-doc) #printable-payroll-sheet,
+  body:has(#printable-employee-doc) #printable-payslip,
+  body:has(#printable-employee-doc) #printable-id-card {
+    display: none !important;
+  }
+
+  /* Case C: When on ID Card tab (and no modal is open), ONLY show #printable-id-card */
+  body:has(#printable-id-card):not(:has(#printable-payslip)):not(:has(#printable-employee-doc)) #printable-id-card {
+    display: flex !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
+  }
+
+  /* Case D: When on Payroll Sheet tab (and no modal is open), ONLY show #printable-payroll-sheet */
+  body:has(#printable-payroll-sheet):not(:has(#printable-payslip)):not(:has(#printable-employee-doc)) #printable-payroll-sheet {
+    display: block !important;
+    visibility: visible !important;
+    position: relative !important;
+    width: 100% !important;
   }
 
   #printable-employee-doc *,
