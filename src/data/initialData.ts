@@ -109,28 +109,20 @@ export const samplePayrollRecords: PayrollRecord[] = [
 
 export const defaultPortalUsers: PortalUser[] = [
   {
-    id: 'usr_admin',
-    username: 'admin',
-    password: 'admin123',
-    fullName: 'Rajesh Sharma (Admin)',
+    id: 'usr_saurabh',
+    username: 'Saurabh@001',
+    password: 'Saurabh@001',
+    fullName: 'Saurabh (Administrator)',
     role: 'System Administrator',
     allowedTabs: ['dashboard', 'payroll', 'history', 'form', 'idcard', 'settings'],
   },
   {
-    id: 'usr_hr',
-    username: 'hr_staff',
-    password: 'hr123',
-    fullName: 'Priya Verma',
-    role: 'HR Officer',
-    allowedTabs: ['dashboard', 'form', 'idcard'],
-  },
-  {
-    id: 'usr_payroll',
-    username: 'payroll_user',
-    password: 'pay123',
-    fullName: 'Amit Kumar',
-    role: 'Payroll Accountant',
-    allowedTabs: ['dashboard', 'payroll', 'history'],
+    id: 'usr_raja',
+    username: 'Raja#159',
+    password: 'Raja#159',
+    fullName: 'Raja (Administrator)',
+    role: 'System Administrator',
+    allowedTabs: ['dashboard', 'payroll', 'history', 'form', 'idcard', 'settings'],
   },
 ];
 

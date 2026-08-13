@@ -35,13 +35,39 @@ export default function App() {
 
   // Users & Authentication State
   const [users, setUsers] = useState<PortalUser[]>(() => {
-    const saved = localStorage.getItem('apex_portal_users');
-    return saved ? JSON.parse(saved) : defaultPortalUsers;
+    const saved = localStorage.getItem('apex_portal_users_v4');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const hasOldDemo = parsed.some((u: PortalUser) => 
+            u.username === 'admin' || u.username === 'hr_staff' || u.username === 'payroll_user'
+          );
+          if (!hasOldDemo) {
+            return parsed;
+          }
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    localStorage.setItem('apex_portal_users_v4', JSON.stringify(defaultPortalUsers));
+    return defaultPortalUsers;
   });
 
   const [currentUser, setCurrentUser] = useState<PortalUser | null>(() => {
     const saved = localStorage.getItem('apex_current_user');
-    return saved ? JSON.parse(saved) : null;
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && (parsed.username === 'Saurabh@001' || parsed.username === 'Raja#159')) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return null;
   });
 
   // Data States
@@ -166,7 +192,7 @@ export default function App() {
 
   // Sync state to LocalStorage as secondary cache
   useEffect(() => {
-    localStorage.setItem('apex_portal_users', JSON.stringify(users));
+    localStorage.setItem('apex_portal_users_v4', JSON.stringify(users));
   }, [users]);
 
   useEffect(() => {
