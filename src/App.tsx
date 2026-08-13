@@ -206,8 +206,8 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col antialiased selection:bg-blue-500 selection:text-white">
-      {/* Header (Hidden during Print) */}
+    <div className="min-h-screen bg-slate-100 text-slate-800 font-sans flex flex-col lg:flex-row antialiased selection:bg-blue-500 selection:text-white">
+      {/* Desktop Left Sidebar / Mobile Top Bar + Drawer */}
       <Header
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -219,8 +219,9 @@ export default function App() {
         onLogout={handleLogout}
       />
 
-      {/* Main Content Area (Hidden during Print to exclude Portal UI) */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 md:pb-8 print:hidden">
+      {/* Main Right Content Panel */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-24 lg:pb-8 print:hidden">
         {activeTab === 'dashboard' && effectiveCurrentUser?.allowedTabs.includes('dashboard') && (
           <Dashboard
             payrollRecords={payrollRecords}
@@ -285,6 +286,7 @@ export default function App() {
           />
         )}
       </main>
+    </div>
 
       {/* SQL Import Modal */}
       {isSqlImportModalOpen && (

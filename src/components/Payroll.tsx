@@ -7,7 +7,12 @@ import { PayrollRecord, CompanySettings } from '../types';
 import { formatINR, calculatePayrollRow } from '../lib/calculations';
 import { downloadSampleExcel, exportPayrollToExcel, parseExcelOrCsvFile } from '../lib/excel';
 import { SearchableCompanySelect } from './SearchableCompanySelect';
-import { savePayrollRecordToFirestore, saveBatchPayrollRecordsToFirestore, deletePayrollRecordFromFirestore } from '../lib/firebase';
+import { 
+  savePayrollRecordToFirestore, 
+  saveBatchPayrollRecordsToFirestore, 
+  deletePayrollRecordFromFirestore,
+  deleteBatchPayrollRecordsFromFirestore 
+} from '../lib/firebase';
 
 interface PayrollProps {
   records: PayrollRecord[];
@@ -30,6 +35,12 @@ export const Payroll: React.FC<PayrollProps> = ({
   const [selectedAgentFilter, setSelectedAgentFilter] = useState<string>('ALL');
   const [selectedCompanyFilter, setSelectedCompanyFilter] = useState<string>('ALL');
   
+  // Selection State
+  const [selectedRecordIds, setSelectedRecordIds] = useState<string[]>([]);
+  const [isBulkUpdateModalOpen, setIsBulkUpdateModalOpen] = useState(false);
+  const [bulkUpdateField, setBulkUpdateField] = useState<'clientCompany' | 'rate' | 'days' | 'agt' | 'clearDeductions'>('clientCompany');
+  const [bulkUpdateValue, setBulkUpdateValue] = useState('');
+
   // Modal states
   const [isAddEditModalOpen, setIsAddEditModalOpen] = useState(false);
   const [editingRecord, setEditingRecord] = useState<Partial<PayrollRecord> | null>(null);
@@ -59,6 +70,96 @@ export const Payroll: React.FC<PayrollProps> = ({
 
     return matchesSearch && matchesAgent && matchesCompany;
   });
+
+  const isAllSelected = filteredRecords.length > 0 && filteredRecords.every((r) => selectedRecordIds.includes(r.id));
+
+  const handleToggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedRecordIds([]);
+    } else {
+      setSelectedRecordIds(filteredRecords.map((r) => r.id));
+    }
+  };
+
+  const handleToggleSelectRow = (id: string) => {
+    setSelectedRecordIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedRecordIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedRecordIds.length} selected payroll record(s) from Cloud Firestore?`)) {
+      const idsToDelete = [...selectedRecordIds];
+      setRecords((prev) => prev.filter((r) => !idsToDelete.includes(r.id)));
+      setSelectedRecordIds([]);
+      deleteBatchPayrollRecordsFromFirestore(idsToDelete).catch(console.error);
+      setImportStatus({
+        message: `Deleted ${idsToDelete.length} payroll record(s) from cloud database.`,
+        type: 'success',
+      });
+      setTimeout(() => setImportStatus(null), 4000);
+    }
+  };
+
+  const handleClearAllRecords = () => {
+    if (records.length === 0) return;
+    if (confirm(`⚠️ DANGER: Are you sure you want to CLEAR ALL ${records.length} payroll records from the active sheet?`)) {
+      const allIds = records.map((r) => r.id);
+      setRecords([]);
+      setSelectedRecordIds([]);
+      deleteBatchPayrollRecordsFromFirestore(allIds).catch(console.error);
+      setImportStatus({
+        message: `Cleared all payroll records from active sheet.`,
+        type: 'success',
+      });
+      setTimeout(() => setImportStatus(null), 4000);
+    }
+  };
+
+  const handleBulkUpdateSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedRecordIds.length === 0) return;
+
+    const recordsToUpdate: PayrollRecord[] = [];
+    const updatedRecords = records.map((r) => {
+      if (!selectedRecordIds.includes(r.id)) return r;
+
+      let updated = { ...r };
+      if (bulkUpdateField === 'clientCompany') {
+        updated.clientCompany = bulkUpdateValue;
+      } else if (bulkUpdateField === 'agt') {
+        updated.agt = bulkUpdateValue;
+      } else if (bulkUpdateField === 'rate') {
+        updated.rate = Number(bulkUpdateValue) || updated.rate;
+      } else if (bulkUpdateField === 'days') {
+        updated.days = Number(bulkUpdateValue) || updated.days;
+      } else if (bulkUpdateField === 'clearDeductions') {
+        updated.pf = 0;
+        updated.esic = 0;
+        updated.gwlf = 0;
+        updated.pt = 0;
+        updated.advance = 0;
+        updated.trn = 0;
+        updated.rr = 0;
+        updated.food = 0;
+      }
+
+      const calculated = calculatePayrollRow(updated);
+      recordsToUpdate.push(calculated);
+      return calculated;
+    });
+
+    setRecords(updatedRecords);
+    saveBatchPayrollRecordsToFirestore(recordsToUpdate).catch(console.error);
+    setIsBulkUpdateModalOpen(false);
+    setSelectedRecordIds([]);
+    setImportStatus({
+      message: `Updated ${recordsToUpdate.length} employee payroll record(s) in database!`,
+      type: 'success',
+    });
+    setTimeout(() => setImportStatus(null), 4000);
+  };
 
   // Agents and Companies list
   const uniqueAgents = Array.from(new Set(records.map((r) => r.agt).filter(Boolean)));
@@ -231,6 +332,16 @@ export const Payroll: React.FC<PayrollProps> = ({
               Print Payroll Sheet
             </button>
 
+            {/* Clear All Records */}
+            <button
+              onClick={handleClearAllRecords}
+              id="btn-clear-all-payroll"
+              className="px-3.5 py-2 bg-rose-100 hover:bg-rose-600 text-rose-700 hover:text-white font-bold text-xs rounded-xl flex items-center gap-2 cursor-pointer transition-all border border-rose-200 shadow-sm"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear All
+            </button>
+
             {/* Add Employee Row */}
             <button
               onClick={() => {
@@ -334,14 +445,74 @@ export const Payroll: React.FC<PayrollProps> = ({
         </div>
       </div>
 
+      {/* Bulk Selection Action Banner */}
+      {selectedRecordIds.length > 0 && (
+        <div className="bg-purple-900 text-white p-3 px-4 rounded-2xl shadow-xl border border-purple-700 flex flex-wrap items-center justify-between gap-3 animate-fadeIn">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={handleToggleSelectAll}
+              className="w-4 h-4 rounded text-purple-600 focus:ring-purple-500 cursor-pointer"
+            />
+            <span className="font-black text-xs tracking-wide">
+              {selectedRecordIds.length} Worker(s) Selected
+            </span>
+            <span className="text-[11px] text-purple-200 hidden sm:inline">
+              (out of {filteredRecords.length} filtered)
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                setBulkUpdateValue('');
+                setIsBulkUpdateModalOpen(true);
+              }}
+              id="btn-bulk-update-payroll"
+              className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow cursor-pointer transition-all"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+              Bulk Update Selected
+            </button>
+
+            <button
+              onClick={handleBulkDelete}
+              id="btn-bulk-delete-payroll"
+              className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl flex items-center gap-1.5 shadow cursor-pointer transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Delete Selected ({selectedRecordIds.length})
+            </button>
+
+            <button
+              onClick={() => setSelectedRecordIds([])}
+              className="px-3 py-1.5 bg-purple-950 hover:bg-purple-800 text-purple-200 font-bold text-xs rounded-xl cursor-pointer"
+            >
+              Deselect All
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Complete 33-Column Data Table for Desktop & Tablet */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden hidden sm:block" id="printable-payroll-sheet">
         <div className="overflow-x-auto max-h-[600px] overflow-y-auto scrollbar-thin">
           <table className="w-full text-left border-collapse text-[11px] font-sans">
             <thead className="bg-slate-900 text-slate-200 sticky top-0 z-20 uppercase font-semibold tracking-wider text-[10px]">
               <tr>
+                {/* Select Checkbox Column Header */}
+                <th className="p-3 sticky left-0 bg-slate-900 z-30 border-b border-r border-slate-800 text-center w-10">
+                  <input
+                    type="checkbox"
+                    checked={isAllSelected}
+                    onChange={handleToggleSelectAll}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                    title="Select All Records"
+                  />
+                </th>
                 {/* Actions Column */}
-                <th className="p-3 sticky left-0 bg-slate-900 z-30 border-b border-r border-slate-800 text-center w-20">
+                <th className="p-3 border-b border-r border-slate-800 text-center min-w-[90px]">
                   ACTION
                 </th>
                 <th className="p-3 border-b border-r border-slate-800 min-w-[50px] text-center">S.N.</th>
@@ -389,8 +560,17 @@ export const Payroll: React.FC<PayrollProps> = ({
               {filteredRecords.length > 0 ? (
                 filteredRecords.map((r, idx) => (
                   <tr key={r.id} className="hover:bg-blue-50/50 transition-colors group">
+                    {/* Checkbox Cell */}
+                    <td className="p-2 sticky left-0 bg-white group-hover:bg-blue-50/90 z-10 border-r border-slate-200 text-center w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedRecordIds.includes(r.id)}
+                        onChange={() => handleToggleSelectRow(r.id)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                    </td>
                     {/* Sticky Action Cell */}
-                    <td className="p-2 sticky left-0 bg-white group-hover:bg-blue-50/90 z-10 border-r border-slate-200 text-center">
+                    <td className="p-2 border-r border-slate-200 text-center">
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => onPrintSlip(r)}
@@ -890,6 +1070,99 @@ export const Payroll: React.FC<PayrollProps> = ({
                 >
                   <Save className="w-4 h-4" />
                   Save Snapshot to History
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Bulk Update Modal */}
+      {isBulkUpdateModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 mb-4">
+              <div className="flex items-center gap-2">
+                <Edit2 className="w-5 h-5 text-purple-600" />
+                <h3 className="font-bold text-slate-900 text-base">
+                  Bulk Update ({selectedRecordIds.length} Selected)
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsBulkUpdateModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1 rounded-lg"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleBulkUpdateSubmit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Field to Update</label>
+                <select
+                  value={bulkUpdateField}
+                  onChange={(e) => setBulkUpdateField(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500"
+                >
+                  <option value="clientCompany">Client Company / Site</option>
+                  <option value="agt">Agent / Contractor Name</option>
+                  <option value="days">Present Days Worked</option>
+                  <option value="rate">Daily Wage Rate (₹)</option>
+                  <option value="clearDeductions">Reset All Deductions to ₹0</option>
+                </select>
+              </div>
+
+              {bulkUpdateField !== 'clearDeductions' ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">New Value</label>
+                  {bulkUpdateField === 'clientCompany' ? (
+                    <input
+                      type="text"
+                      value={bulkUpdateValue}
+                      onChange={(e) => setBulkUpdateValue(e.target.value)}
+                      placeholder="e.g. WESTERN REFRIGERATION CO. LTD."
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 uppercase"
+                      required
+                    />
+                  ) : bulkUpdateField === 'agt' ? (
+                    <input
+                      type="text"
+                      value={bulkUpdateValue}
+                      onChange={(e) => setBulkUpdateValue(e.target.value)}
+                      placeholder="e.g. AGT-PARISHRAM"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500 uppercase"
+                      required
+                    />
+                  ) : (
+                    <input
+                      type="number"
+                      value={bulkUpdateValue}
+                      onChange={(e) => setBulkUpdateValue(e.target.value)}
+                      placeholder="Enter numeric value"
+                      className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:ring-2 focus:ring-purple-500"
+                      required
+                    />
+                  )}
+                </div>
+              ) : (
+                <div className="bg-amber-50 p-3 rounded-xl border border-amber-200 text-xs text-amber-800">
+                  ⚠️ This will reset PF, ESIC, GWLF, PT, Advance, TRN, R/R, and Food deductions to ₹0 for all {selectedRecordIds.length} selected employees.
+                </div>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setIsBulkUpdateModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs rounded-xl shadow"
+                >
+                  Apply Bulk Update
                 </button>
               </div>
             </form>

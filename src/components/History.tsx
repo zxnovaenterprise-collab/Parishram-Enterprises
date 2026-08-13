@@ -7,7 +7,7 @@ import {
 import { PayrollHistoryBatch, PayrollRecord, CompanySettings } from '../types';
 import { formatINR, calculatePayrollRow } from '../lib/calculations';
 import { exportPayrollToExcel } from '../lib/excel';
-import { saveHistoryBatchToFirestore, deleteHistoryBatchFromFirestore } from '../lib/firebase';
+import { saveHistoryBatchToFirestore, deleteHistoryBatchFromFirestore, deleteBatchHistoryFromFirestore } from '../lib/firebase';
 import { SearchableCompanySelect } from './SearchableCompanySelect';
 
 interface HistoryProps {
@@ -38,6 +38,12 @@ export const History: React.FC<HistoryProps> = ({
   // Notification Toast
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Selection state for History Batches
+  const [selectedBatchIds, setSelectedBatchIds] = useState<string[]>([]);
+
+  // Selection state for Records inside Selected History Batch Modal
+  const [selectedRecordIdsInBatch, setSelectedRecordIdsInBatch] = useState<string[]>([]);
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 4000);
@@ -56,6 +62,88 @@ export const History: React.FC<HistoryProps> = ({
 
     return matchesSearch && matchesCompany;
   });
+
+  const isAllBatchesSelected = filteredBatches.length > 0 && filteredBatches.every((b) => selectedBatchIds.includes(b.id));
+
+  const handleToggleSelectAllBatches = () => {
+    if (isAllBatchesSelected) {
+      setSelectedBatchIds([]);
+    } else {
+      setSelectedBatchIds(filteredBatches.map((b) => b.id));
+    }
+  };
+
+  const handleToggleSelectBatch = (id: string) => {
+    setSelectedBatchIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDeleteBatches = async () => {
+    if (selectedBatchIds.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedBatchIds.length} selected history batch(es) from Cloud Firestore?`)) {
+      const idsToDelete = [...selectedBatchIds];
+      setHistoryBatches((prev) => prev.filter((b) => !idsToDelete.includes(b.id)));
+      setSelectedBatchIds([]);
+      await deleteBatchHistoryFromFirestore(idsToDelete);
+      showToast(`Deleted ${idsToDelete.length} history batch(es) from database.`);
+    }
+  };
+
+  const handleClearAllHistory = async () => {
+    if (historyBatches.length === 0) return;
+    if (confirm(`⚠️ DANGER: Are you sure you want to CLEAR ALL ${historyBatches.length} history snapshot batches from Firestore?`)) {
+      const allIds = historyBatches.map((b) => b.id);
+      setHistoryBatches([]);
+      setSelectedBatchIds([]);
+      if (selectedBatch) setSelectedBatch(null);
+      await deleteBatchHistoryFromFirestore(allIds);
+      showToast(`Cleared all history snapshot batches.`);
+    }
+  };
+
+  // Bulk actions inside selected batch modal
+  const filteredRecordsInBatch = selectedBatch ? selectedBatch.records.filter((r) =>
+    r.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
+    r.cardNo.toLowerCase().includes(batchSearchTerm.toLowerCase())
+  ) : [];
+
+  const isAllRecordsInBatchSelected = filteredRecordsInBatch.length > 0 && filteredRecordsInBatch.every((r) => selectedRecordIdsInBatch.includes(r.id));
+
+  const handleToggleSelectAllRecordsInBatch = () => {
+    if (isAllRecordsInBatchSelected) {
+      setSelectedRecordIdsInBatch([]);
+    } else {
+      setSelectedRecordIdsInBatch(filteredRecordsInBatch.map((r) => r.id));
+    }
+  };
+
+  const handleToggleSelectRecordInBatch = (id: string) => {
+    setSelectedRecordIdsInBatch((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkDeleteRecordsInBatch = async () => {
+    if (!selectedBatch || selectedRecordIdsInBatch.length === 0) return;
+    if (confirm(`Are you sure you want to delete ${selectedRecordIdsInBatch.length} selected worker record(s) from this history batch?`)) {
+      const remainingRecords = selectedBatch.records.filter((r) => !selectedRecordIdsInBatch.includes(r.id));
+      const updatedTotalNet = remainingRecords.reduce((sum, r) => sum + r.netSalary, 0);
+
+      const updatedBatch: PayrollHistoryBatch = {
+        ...selectedBatch,
+        totalEmployees: remainingRecords.length,
+        totalNetSalary: updatedTotalNet,
+        records: remainingRecords,
+      };
+
+      setSelectedBatch(updatedBatch);
+      setHistoryBatches((prev) => prev.map((b) => b.id === updatedBatch.id ? updatedBatch : b));
+      setSelectedRecordIdsInBatch([]);
+      await saveHistoryBatchToFirestore(updatedBatch);
+      showToast(`Deleted ${selectedRecordIdsInBatch.length} worker record(s) from history batch.`);
+    }
+  };
 
   // Unique companies in history
   const historyCompanies = Array.from(
@@ -189,7 +277,17 @@ export const History: React.FC<HistoryProps> = ({
           />
         </div>
 
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-end">
+          <label className="flex items-center gap-1.5 text-xs font-bold text-slate-700 cursor-pointer bg-slate-100 hover:bg-slate-200 px-3 py-2 rounded-xl border border-slate-300">
+            <input
+              type="checkbox"
+              checked={isAllBatchesSelected}
+              onChange={handleToggleSelectAllBatches}
+              className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+            />
+            <span>Select All</span>
+          </label>
+
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-600">
             <Filter className="w-4 h-4 text-slate-400" />
             <span>Company:</span>
@@ -204,8 +302,37 @@ export const History: React.FC<HistoryProps> = ({
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+
+          {historyBatches.length > 0 && (
+            <button
+              onClick={handleClearAllHistory}
+              title="Permanently Delete All Saved History Snapshots"
+              className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs rounded-xl flex items-center gap-1 cursor-pointer transition-all"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              Clear All
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Bulk Action Toolbar for Batches */}
+      {selectedBatchIds.length > 0 && (
+        <div className="p-3 bg-slate-900 text-white rounded-2xl shadow-xl border border-slate-800 flex items-center justify-between gap-4 animate-fadeIn">
+          <span className="text-xs font-bold text-slate-300">
+            Selected <strong className="text-blue-400 font-mono text-sm">{selectedBatchIds.length}</strong> History Batch(es)
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleBulkDeleteBatches}
+              className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs rounded-xl shadow cursor-pointer flex items-center gap-1.5"
+            >
+              <Trash2 className="w-4 h-4" />
+              Delete Selected ({selectedBatchIds.length})
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* History Batches Grid / Cards List */}
       {filteredBatches.length === 0 ? (
@@ -218,29 +345,41 @@ export const History: React.FC<HistoryProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-          {filteredBatches.map((batch) => (
-            <div
-              key={batch.id}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between group relative overflow-hidden"
-            >
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500" />
+          {filteredBatches.map((batch) => {
+            const isSelected = selectedBatchIds.includes(batch.id);
+            return (
+              <div
+                key={batch.id}
+                className={`bg-white rounded-2xl border transition-all p-5 flex flex-col justify-between group relative overflow-hidden ${
+                  isSelected ? 'border-blue-500 ring-2 ring-blue-500/20 shadow-md bg-blue-50/20' : 'border-slate-200/90 shadow-sm hover:shadow-md'
+                }`}
+              >
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-emerald-500" />
 
-              <div>
-                {/* Company & Date Header */}
-                <div className="flex items-start justify-between gap-2 mb-3">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-bold">
-                    <Building className="w-3.5 h-3.5 text-blue-500" />
-                    {batch.clientCompany || 'General Payroll'}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
-                    <Calendar className="w-3 h-3 text-slate-400" />
-                    {new Date(batch.createdAt).toLocaleDateString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric'
-                    })}
-                  </span>
-                </div>
+                <div>
+                  {/* Company & Date Header */}
+                  <div className="flex items-start justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => handleToggleSelectBatch(batch.id)}
+                        className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                      />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-100 text-[11px] font-bold">
+                        <Building className="w-3.5 h-3.5 text-blue-500" />
+                        {batch.clientCompany || 'General Payroll'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
+                      <Calendar className="w-3 h-3 text-slate-400" />
+                      {new Date(batch.createdAt).toLocaleDateString('en-IN', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric'
+                      })}
+                    </span>
+                  </div>
 
                 {/* Batch Name Title */}
                 <h3 className="text-sm font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 mb-2">
@@ -303,7 +442,8 @@ export const History: React.FC<HistoryProps> = ({
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
@@ -367,6 +507,15 @@ export const History: React.FC<HistoryProps> = ({
               </div>
 
               <div className="flex items-center gap-4 text-xs font-mono font-bold text-slate-700">
+                {selectedRecordIdsInBatch.length > 0 && (
+                  <button
+                    onClick={handleBulkDeleteRecordsInBatch}
+                    className="px-3 py-1 bg-rose-600 hover:bg-rose-500 text-white font-sans font-bold text-xs rounded-lg shadow transition-all cursor-pointer flex items-center gap-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Selected ({selectedRecordIdsInBatch.length})
+                  </button>
+                )}
                 <span>Total Staff: <strong className="text-blue-600">{selectedBatch.records.length}</strong></span>
                 <span>Net Payout: <strong className="text-emerald-600">{formatINR(selectedBatch.totalNetSalary)}</strong></span>
               </div>
@@ -378,7 +527,15 @@ export const History: React.FC<HistoryProps> = ({
                 <table className="w-full text-left border-collapse text-[11px] font-sans">
                   <thead>
                     <tr className="bg-slate-900 text-white font-bold uppercase tracking-wider text-[10px]">
-                      <th className="p-2 border.b border-slate-800 text-center w-10">S.N.</th>
+                      <th className="p-2 border-b border-slate-800 text-center w-10">
+                        <input
+                          type="checkbox"
+                          checked={isAllRecordsInBatchSelected}
+                          onChange={handleToggleSelectAllRecordsInBatch}
+                          className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                        />
+                      </th>
+                      <th className="p-2 border-b border-slate-800 text-center w-8">#</th>
                       <th className="p-2 border-b border-slate-800">Card No</th>
                       <th className="p-2 border-b border-slate-800">Name</th>
                       <th className="p-2 border-b border-slate-800">Days</th>
@@ -392,13 +549,18 @@ export const History: React.FC<HistoryProps> = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-200">
-                    {selectedBatch.records
-                      .filter((r) => 
-                        r.name.toLowerCase().includes(batchSearchTerm.toLowerCase()) ||
-                        r.cardNo.toLowerCase().includes(batchSearchTerm.toLowerCase())
-                      )
-                      .map((rec, index) => (
-                        <tr key={rec.id} className="hover:bg-blue-50/50 transition-colors">
+                    {filteredRecordsInBatch.map((rec, index) => {
+                      const isSelected = selectedRecordIdsInBatch.includes(rec.id);
+                      return (
+                        <tr key={rec.id} className={`transition-colors ${isSelected ? 'bg-indigo-50/80' : 'hover:bg-blue-50/50'}`}>
+                          <td className="p-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleSelectRecordInBatch(rec.id)}
+                              className="w-3.5 h-3.5 rounded text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            />
+                          </td>
                           <td className="p-2 text-center font-mono font-bold text-slate-500">{index + 1}</td>
                           <td className="p-2 font-mono font-bold text-slate-800">{rec.cardNo}</td>
                           <td className="p-2 font-bold text-slate-900">{rec.name}</td>
@@ -435,7 +597,8 @@ export const History: React.FC<HistoryProps> = ({
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

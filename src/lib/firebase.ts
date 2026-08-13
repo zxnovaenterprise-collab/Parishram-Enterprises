@@ -145,6 +145,18 @@ export async function saveBatchEmployeesToFirestore(employees: EmployeeForm[]) {
 }
 
 /**
+ * Delete multiple Employees in batch
+ */
+export async function deleteBatchEmployeesFromFirestore(empIds: string[]) {
+  const batch = writeBatch(db);
+  empIds.forEach((id) => {
+    const ref = doc(db, EMPLOYEES_COL, id);
+    batch.delete(ref);
+  });
+  await batch.commit();
+}
+
+/**
  * Delete Employee
  */
 export async function deleteEmployeeFromFirestore(empId: string) {
@@ -168,6 +180,18 @@ export async function saveBatchPayrollRecordsToFirestore(records: PayrollRecord[
   records.forEach((rec) => {
     const ref = doc(db, PAYROLL_COL, rec.id);
     batch.set(ref, cleanForFirestore(rec), { merge: true });
+  });
+  await batch.commit();
+}
+
+/**
+ * Delete multiple Payroll Records in batch
+ */
+export async function deleteBatchPayrollRecordsFromFirestore(recIds: string[]) {
+  const batch = writeBatch(db);
+  recIds.forEach((id) => {
+    const ref = doc(db, PAYROLL_COL, id);
+    batch.delete(ref);
   });
   await batch.commit();
 }
@@ -230,6 +254,18 @@ export function subscribeHistoryBatches(
 export async function saveHistoryBatchToFirestore(batch: PayrollHistoryBatch) {
   const batchRef = doc(db, HISTORY_COL, batch.id);
   await setDoc(batchRef, cleanForFirestore(batch), { merge: true });
+}
+
+/**
+ * Delete multiple Payroll History Batches in batch
+ */
+export async function deleteBatchHistoryFromFirestore(batchIds: string[]) {
+  const batch = writeBatch(db);
+  batchIds.forEach((id) => {
+    const ref = doc(db, HISTORY_COL, id);
+    batch.delete(ref);
+  });
+  await batch.commit();
 }
 
 /**
